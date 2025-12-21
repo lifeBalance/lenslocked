@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -10,7 +13,20 @@ import (
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	_ = r
 	w.Header().Set("Content-type", "text/html; charset=utf-8")
-	fmt.Fprint(w, "<h1>Welcome to my site!</h1>")
+
+	tplPath := filepath.Join("templates", "home.gohtml") // Windows
+	tpl, err := template.ParseFiles(tplPath)
+	if err != nil {
+		log.Printf("parsing template: %v", err)
+		http.Error(w, "Error parsing the template", http.StatusInternalServerError)
+		return
+	}
+
+	err = tpl.Execute(w, nil)
+	if err != nil {
+		log.Printf("executing template: %v", err)
+		http.Error(w, "Error executing the template", http.StatusInternalServerError)
+	}
 }
 
 func contactHandler(w http.ResponseWriter, r *http.Request) {
