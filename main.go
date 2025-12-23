@@ -21,8 +21,9 @@ func main() {
 	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
 	r.Get("/faq", controllers.FAQ(tpl))
 
-	tpl = views.MustParse(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
-	r.Get("/signup", controllers.FAQ(tpl))
+	usersController := controllers.Users{}
+	usersController.Templates.New = views.MustParse(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
+	r.Get("/signup", usersController.New)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
