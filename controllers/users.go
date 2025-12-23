@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -13,4 +14,16 @@ type Users struct {
 func (u Users) New(w http.ResponseWriter, r *http.Request) {
 	// Render the view with the signup form
 	u.Templates.New.Execute(w, nil)
+}
+
+func (u Users) Create(w http.ResponseWriter, r *http.Request) {
+	// err := r.ParseForm()
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+	// fmt.Fprint(w, "Email:", r.PostForm.Get("email"))
+	// fmt.Fprint(w, "\tpassword:", r.PostForm.Get("password"))
+	fmt.Fprint(w, "Email:", r.FormValue("email")) // No need for ParseForm
+	fmt.Fprint(w, "\npassword:", r.FormValue("password"))
 }
