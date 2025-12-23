@@ -1,7 +1,9 @@
-{{define "page"}}
-<h1>Contact Page</h1>
-<p>
+{{template "header" .}}
+<div class="px-6">
+  <h1 class="py-4 text-4xl semibold tracking-tight">Contact Page</h1>
+<p class="text-gray-800">
   To get in touch, email me at
-  <a href="mailto:sponge@bob.com">sponge@bob.com</a>
+  <a  class="underline" href="mailto:sponge@bob.com">sponge@bob.com</a>
 </p>
-{{ end }}
+{{template "footer" .}}
+
