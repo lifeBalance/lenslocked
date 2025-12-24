@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -63,21 +65,21 @@ func main() {
 	fmt.Println("Tables Created!")
 
 	// Insert data
-	var returnedId int
-	name := "Bob"
-	email := "bob@test.com"
-	row := conn.QueryRow(context.Background(), `
-	INSERT INTO users (name, email)
-	VALUES ($1, $2)
-	RETURNING id;
-	`, name, email)
-	err = row.Scan(&returnedId)
-	// row.Err()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("User Created! id:", returnedId, row)
-	fmt.Println("row -->", row)
+	// var returnedId int
+	// name := "Bob"
+	// email := "bob@test.com"
+	// row := conn.QueryRow(context.Background(), `
+	// INSERT INTO users (name, email)
+	// VALUES ($1, $2)
+	// RETURNING id;
+	// `, name, email)
+	// err = row.Scan(&returnedId)
+	// // row.Err()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("User Created! id:", returnedId, row)
+	// fmt.Println("row -->", row)
 
 	// SQL injection demo ☠️
 	// name := "'',''); DROP TABLE users; --"
@@ -90,4 +92,22 @@ func main() {
 	// 	panic(err)
 	// }
 	// fmt.Println("You've been Pwned!")
+
+	// Get user by Id
+	id := 2 // use id of an existing row
+	var name string
+	var email string
+	row := conn.QueryRow(context.Background(), `
+	SELECT name, email
+	FROM users
+	WHERE id=$1
+	`, id)
+	err = row.Scan(&name, &email)
+	if errors.Is(err, sql.ErrNoRows) {
+		fmt.Println("-> No rows <-") // if the user id doesn't exist panic
+	}
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("User: %s, %s", name, email)
 }
