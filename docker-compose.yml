@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: bob
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: lenslocked
+    ports:
+      - 5433:5432 # <our_machine>:<container>
+    volumes:
+      -  pgdata:/var/lib/postgresql
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+  
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula # Not working in 5.4.1; bug in Docker image
+    ports:
+      - 3333:8080 # <our_machine>:<container>
+
+volumes:
+  pgdata: {}
