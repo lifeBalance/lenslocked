@@ -63,26 +63,21 @@ func main() {
 	fmt.Println("Tables Created!")
 
 	// Insert data
-	_, err = conn.Exec(context.Background(), `
+	var returnedId int
+	name := "Bob"
+	email := "bob@test.com"
+	row := conn.QueryRow(context.Background(), `
 	INSERT INTO users (name, email)
-	VALUES ('Bob', 'bob@test.com');
-	`)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("User Created!")
-
-	// Another user
-	name := "Liza"
-	email := "liza@test.com"
-	_, err = conn.Exec(context.Background(), `
-	INSERT INTO users (name, email)
-	VALUES ($1, $2);
+	VALUES ($1, $2)
+	RETURNING id;
 	`, name, email)
+	err = row.Scan(&returnedId)
+	// row.Err()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Another user Created!")
+	fmt.Println("User Created! id:", returnedId, row)
+	fmt.Println("row -->", row)
 
 	// SQL injection demo ☠️
 	// name := "'',''); DROP TABLE users; --"
