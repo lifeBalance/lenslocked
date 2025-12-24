@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -94,20 +92,35 @@ func main() {
 	// fmt.Println("You've been Pwned!")
 
 	// Get user by Id
-	id := 2 // use id of an existing row
-	var name string
-	var email string
-	row := conn.QueryRow(context.Background(), `
-	SELECT name, email
-	FROM users
-	WHERE id=$1
-	`, id)
-	err = row.Scan(&name, &email)
-	if errors.Is(err, sql.ErrNoRows) {
-		fmt.Println("-> No rows <-") // if the user id doesn't exist panic
+	// id := 4 // use id of an existing row
+	// var name string
+	// var email string
+	// row := conn.QueryRow(context.Background(), `
+	// SELECT name, email
+	// FROM users
+	// WHERE id=$1
+	// `, id)
+	// err = row.Scan(&name, &email)
+	// if errors.Is(err, sql.ErrNoRows) {
+	// 	fmt.Println("-> No rows <-") // if the user id doesn't exist panic
+	// }
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Printf("User: %s, %s\n", name, email)
+
+	// insert multiple records
+	userId := 4
+	for i := range 5 {
+		amount := i * 100
+		desc := fmt.Sprintf("Fake order: #%d", i)
+		_, err := conn.Exec(context.Background(), `
+		INSERT INTO orders (user_id, amount, description)
+		VALUES($1, $2, $3)
+		`, userId, amount, desc)
+		if err != nil {
+			panic(err)
+		}
 	}
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("User: %s, %s", name, email)
+	fmt.Println("Created fake orders")
 }
