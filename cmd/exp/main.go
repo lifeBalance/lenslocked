@@ -1,10 +1,11 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/lifebalance/lenslocked/models"
 )
 
 type PostgresConfig struct {
@@ -31,36 +32,38 @@ func main() {
 	}
 
 	// Connecting to db
-	conn, err := pgx.Connect(context.Background(), cfg.Stringify())
+	// conn, err := pgx.Connect(context.Background(), cfg.Stringify())
+	conn, err := sql.Open("pgx", cfg.Stringify())
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close(context.Background())
+	defer conn.Close()
 
-	if err := conn.Ping(context.Background()); err != nil {
+	err = conn.Ping()
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Connected!")
 
 	// Create users table
-	_, err = conn.Exec(context.Background(), `
-	CREATE TABLE IF NOT EXISTS users(
-		id SERIAL PRIMARY KEY,
-		name TEXT,
-		email TEXT UNIQUE NOT NULL
-	);
+	// _, err = conn.Exec(context.Background(), `
+	// CREATE TABLE IF NOT EXISTS users(
+	// 	id SERIAL PRIMARY KEY,
+	// 	name TEXT,
+	// 	email TEXT UNIQUE NOT NULL
+	// );
 
-	CREATE TABLE IF NOT EXISTS orders(
-		id SERIAL PRIMARY KEY,
-		user_id INT NOT NULL,
-		amount INT,
-		description TEXT
-	);
-	`)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Tables Created!")
+	// CREATE TABLE IF NOT EXISTS orders(
+	// 	id SERIAL PRIMARY KEY,
+	// 	user_id INT NOT NULL,
+	// 	amount INT,
+	// 	description TEXT
+	// );
+	// `)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("Tables Created!")
 
 	// Insert data
 	// var returnedId int
@@ -125,36 +128,52 @@ func main() {
 	// fmt.Println("Created fake orders")
 
 	// query multiple records
-	type Order struct {
-		ID          int
-		UserID      int
-		Amount      int
-		Description string
-	}
-	var orders []Order
-	userId := 4
-	rows, err := conn.Query(context.Background(), `
-	SELECT id, amount, description
-	FROM orders
-	WHERE user_id=$1
-	`, userId)
+	// type Order struct {
+	// 	ID          int
+	// 	UserID      int
+	// 	Amount      int
+	// 	Description string
+	// }
+	// var orders []Order
+	// userId := 4
+	// rows, err := conn.Query(context.Background(), `
+	// SELECT id, amount, description
+	// FROM orders
+	// WHERE user_id=$1
+	// `, userId)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer rows.Close()
+	// for rows.Next() {
+	// 	var order Order
+	// 	order.UserID = userId
+	// 	err := rows.Scan(&order.ID, &order.Amount, &order.Description)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	orders = append(orders, order)
+	// }
+	// // check for error
+	// err = rows.Err()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("orders:", orders)
+
+	_, err = conn.Exec(`
+	CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL
+	);
+	`)
 	if err != nil {
 		panic(err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var order Order
-		order.UserID = userId
-		err := rows.Scan(&order.ID, &order.Amount, &order.Description)
-		if err != nil {
-			panic(err)
-		}
-		orders = append(orders, order)
+	fmt.Println("Users table Created!")
+	userService := models.UserService{
+		DB: conn,
 	}
-	// check for error
-	err = rows.Err()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("orders:", orders)
+	userService.Create("bob@test.com", "test1234")
 }
