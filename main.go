@@ -38,9 +38,15 @@ func main() {
 	usersController := controllers.Users{
 		UserService: &userService,
 	}
+	// SIGN UP
 	usersController.Templates.New = views.MustParse(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	r.Get("/signup", usersController.New) // send the form (/users/new is an alternative)
 	r.Post("/users", usersController.Create)
+
+	// SIGN IN
+	usersController.Templates.SignIn = views.MustParse(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
+	r.Get("/signin", usersController.SignIn) // send the form (/sessions/new is an alternative)
+	// r.Post("/users", usersController.Create)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
