@@ -46,7 +46,7 @@ func main() {
 	// SIGN IN
 	usersController.Templates.SignIn = views.MustParse(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
 	r.Get("/signin", usersController.SignIn) // send the form (/sessions/new is an alternative)
-	// r.Post("/users", usersController.Create)
+	r.Post("/signin", usersController.ProcessSignIn)
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
