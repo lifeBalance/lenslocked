@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lifebalance/lenslocked/models"
 )
 
@@ -22,14 +21,7 @@ func (cfg PostgresConfig) Stringify() string {
 }
 
 func main() {
-	cfg := PostgresConfig{
-		Host:     "localhost",
-		Port:     "5433",
-		User:     "bob",
-		Database: "lenslocked",
-		Password: "1234",
-		SSLMode:  "disable",
-	}
+	cfg := models.DefaultPostgresConfig()
 
 	// Connecting to db
 	// conn, err := pgx.Connect(context.Background(), cfg.Stringify())
@@ -175,5 +167,5 @@ func main() {
 	userService := models.UserService{
 		DB: conn,
 	}
-	userService.Create("bob@test.com", "test1234")
+	userService.Create("bob2@test.com", "test1234")
 }
