@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lifebalance/lenslocked/controllers"
+	"github.com/lifebalance/lenslocked/models"
 	"github.com/lifebalance/lenslocked/templates"
 	"github.com/lifebalance/lenslocked/views"
 )
@@ -21,7 +23,21 @@ func main() {
 	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
 	r.Get("/faq", controllers.FAQ(tpl))
 
-	usersController := controllers.Users{}
+	// Connecting to db
+	cfg := models.DefaultPostgresConfig()
+	conn, err := sql.Open("pgx", cfg.Stringify())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	// Initializing users service with the DB connection
+	userService := models.UserService{
+		DB: conn,
+	}
+	usersController := controllers.Users{
+		UserService: &userService,
+	}
 	usersController.Templates.New = views.MustParse(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	r.Get("/signup", usersController.New) // send the form (/users/new is an alternative)
 	r.Post("/users", usersController.Create)
