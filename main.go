@@ -48,6 +48,9 @@ func main() {
 	r.Get("/signin", usersController.SignIn) // send the form (/sessions/new is an alternative)
 	r.Post("/signin", usersController.ProcessSignIn)
 
+	// Cookies
+	r.Get("/users/me", usersController.CurrentUser)
+
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	})
