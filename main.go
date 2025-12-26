@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"github.com/gorilla/csrf"
 	"github.com/lifebalance/lenslocked/controllers"
 	"github.com/lifebalance/lenslocked/models"
+	"github.com/lifebalance/lenslocked/rand"
 	"github.com/lifebalance/lenslocked/templates"
 	"github.com/lifebalance/lenslocked/views"
 )
@@ -61,12 +61,12 @@ func main() {
 
 	fmt.Println("Starting the server on", PORT)
 	//  SETUP CRSF
-	// csrfKey := "8a8k4Sy9l+6uWeK3mJDwkyvWM5gK0JABuW492xA7g6A=" // openssl rand -base64 32
-	csrfKeyB64 := "8a8k4Sy9l+6uWeK3mJDwkyvWM5gK0JABuW492xA7g6A=" // base64 of 32 random bytes
-	csrfKey, err := base64.StdEncoding.DecodeString(csrfKeyB64)
-	if err != nil || len(csrfKey) != 32 {
-		log.Fatalf("invalid CSRF key: need 32 decoded bytes, got %d", len(csrfKey))
+	// SETUP CSRF - Generate 32 random bytes using your rand package
+	csrfKey, err := rand.RandomBytes(32)
+	if err != nil {
+		log.Fatalf("failed to generate CSRF key: %v", err)
 	}
+
 	csrfMw := csrf.Protect(
 		csrfKey,
 		csrf.Secure(false), // fix this before deploying
