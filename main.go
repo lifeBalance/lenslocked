@@ -60,6 +60,7 @@ func main() {
 	const PORT string = ":3000"
 
 	fmt.Println("Starting the server on", PORT)
+	//  SETUP CRSF
 	// csrfKey := "8a8k4Sy9l+6uWeK3mJDwkyvWM5gK0JABuW492xA7g6A=" // openssl rand -base64 32
 	csrfKeyB64 := "8a8k4Sy9l+6uWeK3mJDwkyvWM5gK0JABuW492xA7g6A=" // base64 of 32 random bytes
 	csrfKey, err := base64.StdEncoding.DecodeString(csrfKeyB64)
