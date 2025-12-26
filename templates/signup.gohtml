@@ -5,6 +5,7 @@
       Sign Up
     </h1>
     <form action="/users" method="post">
+      <div class="hidden">{{csrfField}}</div>
       <div class="py-2">
         <label for="email" class="text-sm font-semibold text-gray-700"
           >Email Address</label
