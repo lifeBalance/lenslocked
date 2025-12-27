@@ -40,13 +40,7 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
-	cookie := http.Cookie{
-		Name:     "session",
-		Value:    session.Token,
-		Path:     "/",
-		HttpOnly: true,
-	}
-	http.SetCookie(w, &cookie)
+	setCookie(w, CookieName, session.Token)
 	http.Redirect(w, r, "/user/me", http.StatusFound)
 }
 
@@ -77,30 +71,24 @@ func (u Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 		// TODO: show a warning about the issue
 		return
 	}
-	cookie := http.Cookie{
-		Name:     "session",
-		Value:    session.Token,
-		Path:     "/",
-		HttpOnly: true,
-	}
-	http.SetCookie(w, &cookie)
+	setCookie(w, CookieName, session.Token)
 	http.Redirect(w, r, "/user/me", http.StatusFound)
 }
 
 func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
-	sessionCookie, err := r.Cookie("session")
+	sessionCookie, err := readCookie(r, CookieName)
 	if err != nil {
 		fmt.Println(err)
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
-	user, err := u.SessionService.User(sessionCookie.Value)
+	user, err := u.SessionService.User(sessionCookie)
 	if err != nil {
 		fmt.Println(err)
 		http.Redirect(w, r, "/signin", http.StatusFound)
 		return
 	}
 	fmt.Fprintf(w, "Current user: %s\n", user.Email)
-	fmt.Fprintf(w, "Session cookie: %s\n", sessionCookie.Value)
+	fmt.Fprintf(w, "Session cookie: %s\n", sessionCookie)
 	fmt.Fprintf(w, "Header: %v+\n", r.Header)
 }
