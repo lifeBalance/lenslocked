@@ -33,7 +33,7 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
-	session, err := u.SessionService.Create(int(user.ID))
+	session, err := u.SessionService.Upsert(int(user.ID))
 	if err != nil {
 		fmt.Println(err.Error()) // rudimentary logging
 		// TODO: show a warning about the issue
@@ -65,7 +65,7 @@ func (u Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
-	session, err := u.SessionService.Create(int(user.ID))
+	session, err := u.SessionService.Upsert(int(user.ID))
 	if err != nil {
 		fmt.Println(err.Error()) // rudimentary logging
 		// TODO: show a warning about the issue
