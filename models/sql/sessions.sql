@@ -20,3 +20,6 @@ WHERE token_hash = $1;
 SELECT email, password_hash
 FROM users
 WHERE id = $1;
+
+DELETE FROM sessions
+WHERE token_hash = $1;

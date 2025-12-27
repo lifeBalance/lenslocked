@@ -24,10 +24,25 @@
           >
         </div>
         <div>
-          <a href="/signin" class="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded"
+          <form action="/signout" method="post" class="inline pr-4">
+            <div class="hidden">
+              {{ csrfField }}
+            </div>
+            <button
+              type="submit"
+              class="cursor-pointer font-semibold hover:text-red-500"
+            >
+              Sign out
+            </button>
+          </form>
+          <a
+            href="/signin"
+            class="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded"
             >Sign in</a
           >
-          <a href="/signup" class="px-4 py-2 border border-white hover:border-indigo-400 rounded"
+          <a
+            href="/signup"
+            class="px-4 py-2 border border-white hover:border-indigo-400 rounded"
             >Sign up</a
           >
         </div>
@@ -37,7 +52,9 @@
     <!-- Page content goes here -->
     {{define "footer"}}
     <footer class="mt-16 border-t">
-      <div class="mx-auto max-w-5xl px-4 py-6 flex items-center justify-between text-sm">
+      <div
+        class="mx-auto max-w-5xl px-4 py-6 flex items-center justify-between text-sm"
+      >
         <div class="text-gray-600">© 2026 Lenslocked</div>
         <nav class="flex items-center gap-4">
           <a href="/faq" class="hover:underline">FAQ</a>
@@ -45,7 +62,6 @@
         </nav>
       </div>
     </footer>
-   </body>
- </html>
- {{ end }}
-
+  </body>
+</html>
+{{ end }}

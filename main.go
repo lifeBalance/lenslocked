@@ -55,6 +55,9 @@ func main() {
 	r.Get("/signin", usersController.SignIn) // send the form (/sessions/new is an alternative)
 	r.Post("/signin", usersController.ProcessSignIn)
 
+	// SIGN OUT
+	r.Post("/signout", usersController.ProcessSignOut)
+
 	// Cookies
 	r.Get("/users/me", usersController.CurrentUser)
 
