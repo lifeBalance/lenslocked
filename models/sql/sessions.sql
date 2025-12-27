@@ -12,3 +12,11 @@ UPDATE sessions
 SET token_hash = $2
 WHERE user_id = $1
 RETURNING id;
+
+SELECT user_id
+FROM sessions
+WHERE token_hash = $1;
+
+SELECT email, password_hash
+FROM users
+WHERE id = $1;

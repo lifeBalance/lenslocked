@@ -92,10 +92,29 @@ func (ss *SessionService) Upsert(userId int) (*Session, error) {
 
 func (ss *SessionService) User(token string) (*User, error) {
 	// hash the token
-	// find user in the DB, using the hashed token
-	// fetch user from DB
-	// return user
-	return nil, nil
+	tokenHash := ss.hashToken(token)
+	// find session in the DB, using the hashed token (we get user ID)
+	var user User
+	row := ss.DB.QueryRow(`
+		SELECT user_id
+		FROM sessions
+		WHERE token_hash = $1;
+	`, tokenHash)
+	err := row.Scan(&user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("user: %w", err)
+	}
+	// fetch user from users table, using the user ID from above
+	row = ss.DB.QueryRow(`
+		SELECT email, password_hash
+		FROM users
+		WHERE id = $1;
+	`, user.ID)
+	err = row.Scan(&user.Email, &user.PasswordHash)
+	if err != nil {
+		return nil, fmt.Errorf("user: %w", err)
+	}
+	return &user, nil
 }
 
 func (ss *SessionService) hashToken(token string) string {
