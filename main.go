@@ -60,8 +60,7 @@ func main() {
 	const PORT string = ":3000"
 
 	fmt.Println("Starting the server on", PORT)
-	//  SETUP CRSF
-	// SETUP CSRF - Generate 32 random bytes using your rand package
+	// SETUP CRSF
 	csrfKey, err := rand.RandomBytes(32)
 	if err != nil {
 		log.Fatalf("failed to generate CSRF key: %v", err)
