@@ -35,6 +35,12 @@ func main() {
 	}
 	defer conn.Close()
 
+	// Migrations
+	err = models.Migrate(conn, "migrations")
+	if err != nil {
+		panic(err)
+	}
+
 	// Initializing users service with the DB connection
 	userService := models.UserService{
 		DB: conn,
