@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/csrf"
 	"github.com/lifebalance/lenslocked/controllers"
+	"github.com/lifebalance/lenslocked/migrations"
 	"github.com/lifebalance/lenslocked/models"
 	"github.com/lifebalance/lenslocked/rand"
 	"github.com/lifebalance/lenslocked/templates"
@@ -36,7 +37,7 @@ func main() {
 	defer conn.Close()
 
 	// Migrations
-	err = models.Migrate(conn, "migrations")
+	err = models.MigrateFS(conn, migrations.FS, ".")
 	if err != nil {
 		panic(err)
 	}
