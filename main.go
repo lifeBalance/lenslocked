@@ -28,6 +28,7 @@ func main() {
 
 	// Connecting to db
 	cfg := models.DefaultPostgresConfig()
+	fmt.Println(cfg.Stringify()) // goose postgres "..." status
 	conn, err := sql.Open("pgx", cfg.Stringify())
 	if err != nil {
 		panic(err)
