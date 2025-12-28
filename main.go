@@ -76,7 +76,11 @@ func main() {
 	csrfMw := csrf.Protect(
 		csrfKey,
 		csrf.Secure(false), // fix this before deploying
-		csrf.TrustedOrigins([]string{"localhost:3000"}),
+		csrf.TrustedOrigins([]string{
+			"localhost:3000",
+			"localhost:3000/signup",
+			"localhost:3000/signin",
+		}),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log.Printf("CSRF validation failed!")
 			log.Printf("Method: %s", r.Method)
