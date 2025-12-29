@@ -17,6 +17,8 @@ import (
 )
 
 func main() {
+	const PORT string = ":3000"
+
 	r := chi.NewRouter()
 	tpl := views.MustParse(views.ParseFS(templates.FS, "home.gohtml", "tailwind.gohtml"))
 	r.Get("/", controllers.StaticHandler(tpl))
@@ -72,9 +74,12 @@ func main() {
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 	})
-	const PORT string = ":3000"
 
-	fmt.Println("Starting the server on", PORT)
+	// SETUP USER MW
+	umw := controllers.UserMiddleware{
+		SessionService: &sessionService,
+	}
+
 	// SETUP CRSF
 	csrfKey, err := rand.RandomBytes(32)
 	if err != nil {
@@ -108,7 +113,8 @@ func main() {
 			http.Error(w, "CSRF token invalid", http.StatusForbidden)
 		})),
 	)
-	http.ListenAndServe(PORT, csrfMw(r))
+	fmt.Println("Starting the server on", PORT)
+	http.ListenAndServe(PORT, csrfMw(umw.SetUser(r)))
 }
 
 // Wrap any HandlerFunc with this mw to time it.
