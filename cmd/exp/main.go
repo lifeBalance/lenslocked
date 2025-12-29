@@ -1,171 +1,58 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
-
-	"github.com/lifebalance/lenslocked/models"
 )
 
-type PostgresConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Database string
-	SSLMode  string
-}
+type ctxKey string // Don't export it (package scope)
 
-func (cfg PostgresConfig) Stringify() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode)
-}
+const (
+	// Don't export it (package scope)ß
+	favouriteColorKey ctxKey = "fav-col"
+)
 
 func main() {
-	cfg := models.DefaultPostgresConfig()
+	// ctx := context.Background()
+	// fmt.Println(ctx)
+	// ctx = context.WithValue(ctx, favouriteColorKey, "blue")
+	// ctx = context.WithValue(ctx, "fav-num", 42)
+	// fmt.Println(ctx)
 
-	// Connecting to db
-	// conn, err := pgx.Connect(context.Background(), cfg.Stringify())
-	conn, err := sql.Open("pgx", cfg.Stringify())
-	if err != nil {
-		panic(err)
+	// Get and print a value
+	// value := ctx.Value("fav-col")
+	// fmt.Println(value) // nil
+
+	// Get and print another value
+	// value = ctx.Value(favouriteColorKey)
+	// fmt.Println(value) // blue
+
+	// Get and print another value
+	// value = ctx.Value("fav-num")
+	// fmt.Println(value) // 42
+
+	var i interface{} = "hello"
+	fmt.Println(i) // hello
+	// Gets the value if it's a string
+	strValue, ok := i.(string)
+	if ok {
+		fmt.Println(strValue) // hello
 	}
-	defer conn.Close()
+	// intValue := i.(int) // panic (assertion fails bc no ok used)
 
-	err = conn.Ping()
-	if err != nil {
-		panic(err)
+	// Gets the value if it's an int
+	intValue, ok := i.(int)
+	if ok {
+		fmt.Println(intValue)
+	} else {
+		fmt.Println("not an int") // not an int
 	}
-	fmt.Println("Connected!")
 
-	// Create users table
-	// _, err = conn.Exec(context.Background(), `
-	// CREATE TABLE IF NOT EXISTS users(
-	// 	id SERIAL PRIMARY KEY,
-	// 	name TEXT,
-	// 	email TEXT UNIQUE NOT NULL
-	// );
-
-	// CREATE TABLE IF NOT EXISTS orders(
-	// 	id SERIAL PRIMARY KEY,
-	// 	user_id INT NOT NULL,
-	// 	amount INT,
-	// 	description TEXT
-	// );
-	// `)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("Tables Created!")
-
-	// Insert data
-	// var returnedId int
-	// name := "Bob"
-	// email := "bob@test.com"
-	// row := conn.QueryRow(context.Background(), `
-	// INSERT INTO users (name, email)
-	// VALUES ($1, $2)
-	// RETURNING id;
-	// `, name, email)
-	// err = row.Scan(&returnedId)
-	// // row.Err()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("User Created! id:", returnedId, row)
-	// fmt.Println("row -->", row)
-
-	// SQL injection demo ☠️
-	// name := "'',''); DROP TABLE users; --"
-	// email := "haha@test.com"
-	// query := fmt.Sprintf(`
-	// INSERT INTO users (name, email)
-	// VALUES (%s, %s);`, name, email)
-	// _, err = conn.Exec(context.Background(), query)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("You've been Pwned!")
-
-	// Get user by Id
-	// id := 4 // use id of an existing row
-	// var name string
-	// var email string
-	// row := conn.QueryRow(context.Background(), `
-	// SELECT name, email
-	// FROM users
-	// WHERE id=$1
-	// `, id)
-	// err = row.Scan(&name, &email)
-	// if errors.Is(err, sql.ErrNoRows) {
-	// 	fmt.Println("-> No rows <-") // if the user id doesn't exist panic
-	// }
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Printf("User: %s, %s\n", name, email)
-
-	// insert multiple records
-	// userId := 4
-	// for i := range 5 {
-	// 	amount := i * 100
-	// 	desc := fmt.Sprintf("Fake order: #%d", i)
-	// 	_, err := conn.Exec(context.Background(), `
-	// 	INSERT INTO orders (user_id, amount, description)
-	// 	VALUES($1, $2, $3)
-	// 	`, userId, amount, desc)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
-	// fmt.Println("Created fake orders")
-
-	// query multiple records
-	// type Order struct {
-	// 	ID          int
-	// 	UserID      int
-	// 	Amount      int
-	// 	Description string
-	// }
-	// var orders []Order
-	// userId := 4
-	// rows, err := conn.Query(context.Background(), `
-	// SELECT id, amount, description
-	// FROM orders
-	// WHERE user_id=$1
-	// `, userId)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer rows.Close()
-	// for rows.Next() {
-	// 	var order Order
-	// 	order.UserID = userId
-	// 	err := rows.Scan(&order.ID, &order.Amount, &order.Description)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	orders = append(orders, order)
-	// }
-	// // check for error
-	// err = rows.Err()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("orders:", orders)
-
-	_, err = conn.Exec(`
-	CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL
-	);
-	`)
-	if err != nil {
-		panic(err)
+	i = 42
+	intValue, ok = i.(int)
+	if ok {
+		fmt.Println(intValue) // 42
+	} else {
+		fmt.Println("not an int")
 	}
-	fmt.Println("Users table Created!")
-	userService := models.UserService{
-		DB: conn,
-	}
-	userService.Create("bob2@test.com", "test1234")
+	fmt.Println(i) // 42
 }
