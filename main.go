@@ -19,17 +19,7 @@ import (
 func main() {
 	const PORT string = ":3000"
 
-	r := chi.NewRouter()
-	tpl := views.MustParse(views.ParseFS(templates.FS, "home.gohtml", "tailwind.gohtml"))
-	r.Get("/", controllers.StaticHandler(tpl))
-
-	tpl = views.MustParse(views.ParseFS(templates.FS, "contact.gohtml", "tailwind.gohtml"))
-	r.Get("/contact", controllers.StaticHandler(tpl))
-
-	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
-	r.Get("/faq", controllers.FAQ(tpl))
-
-	// Connecting to db
+	// Set up DB
 	cfg := models.DefaultPostgresConfig()
 	fmt.Println(cfg.Stringify()) // goose postgres "..." status
 	conn, err := sql.Open("pgx", cfg.Stringify())
@@ -44,43 +34,19 @@ func main() {
 		panic(err)
 	}
 
-	// Initializing users service with the DB connection
+	// Set up services
 	userService := models.UserService{
 		DB: conn,
 	}
 	sessionService := models.SessionService{
 		DB: conn,
 	}
-	usersController := controllers.Users{
-		UserService:    &userService,
-		SessionService: &sessionService,
-	}
-	// SIGN UP
-	usersController.Templates.New = views.MustParse(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
-	r.Get("/signup", usersController.New) // send the form (/users/new is an alternative)
-	r.Post("/users", usersController.Create)
 
-	// SIGN IN
-	usersController.Templates.SignIn = views.MustParse(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
-	r.Get("/signin", usersController.SignIn) // send the form (/sessions/new is an alternative)
-	r.Post("/signin", usersController.ProcessSignIn)
-
-	// SIGN OUT
-	r.Post("/signout", usersController.ProcessSignOut)
-
-	// Cookies
-	r.Get("/users/me", usersController.CurrentUser)
-
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-	})
-
-	// SETUP USER MW
+	// Set up the middleware
 	umw := controllers.UserMiddleware{
 		SessionService: &sessionService,
 	}
 
-	// SETUP CRSF
 	csrfKey, err := rand.RandomBytes(32)
 	if err != nil {
 		log.Fatalf("failed to generate CSRF key: %v", err)
@@ -113,8 +79,49 @@ func main() {
 			http.Error(w, "CSRF token invalid", http.StatusForbidden)
 		})),
 	)
+
+	// Set up controllers
+	usersController := controllers.Users{
+		UserService:    &userService,
+		SessionService: &sessionService,
+	}
+	usersController.Templates.New = views.MustParse(
+		views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"),
+	)
+	usersController.Templates.SignIn = views.MustParse(
+		views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"),
+	)
+
+	// Set up router and routes
+	r := chi.NewRouter()
+	r.Use(csrfMw)
+	r.Use(umw.SetUser)
+	tpl := views.MustParse(views.ParseFS(templates.FS, "home.gohtml", "tailwind.gohtml"))
+	r.Get("/", controllers.StaticHandler(tpl))
+
+	tpl = views.MustParse(views.ParseFS(templates.FS, "contact.gohtml", "tailwind.gohtml"))
+	r.Get("/contact", controllers.StaticHandler(tpl))
+
+	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
+	r.Get("/faq", controllers.FAQ(tpl))
+
+	r.Get("/signup", usersController.New) // send the form
+	r.Post("/users", usersController.Create)
+	r.Get("/signin", usersController.SignIn) // send the form
+	r.Post("/signin", usersController.ProcessSignIn)
+	r.Post("/signout", usersController.ProcessSignOut)
+	// r.Get("/users/me", usersController.CurrentUser)
+	r.Route("/users/me", func(r chi.Router) {
+		r.Use(umw.RequireUser)
+		r.Get("/", usersController.CurrentUser)
+	})
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+	})
+
+	// Start the server
 	fmt.Println("Starting the server on", PORT)
-	http.ListenAndServe(PORT, csrfMw(umw.SetUser(r)))
+	http.ListenAndServe(PORT, r)
 }
 
 // Wrap any HandlerFunc with this mw to time it.
