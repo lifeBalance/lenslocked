@@ -24,6 +24,7 @@
           >
         </div>
         <div>
+          {{if currentUser}}
           <form action="/signout" method="post" class="inline pr-4">
             <div class="hidden">
               {{ csrfField }}
@@ -35,6 +36,7 @@
               Sign out
             </button>
           </form>
+          {{else}}
           <a
             href="/signin"
             class="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded"
@@ -45,6 +47,7 @@
             class="px-4 py-2 border border-white hover:border-indigo-400 rounded"
             >Sign up</a
           >
+          {{ end }}
         </div>
       </nav>
     </header>
