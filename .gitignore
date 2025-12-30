@@ -2,3 +2,4 @@
 opencode.jsonc
 .air.toml
 tmp/
+.env

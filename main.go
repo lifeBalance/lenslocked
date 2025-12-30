@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/csrf"
+	"github.com/joho/godotenv"
 	"github.com/lifebalance/lenslocked/controllers"
 	"github.com/lifebalance/lenslocked/migrations"
 	"github.com/lifebalance/lenslocked/models"
@@ -18,6 +19,11 @@ import (
 
 func main() {
 	const PORT string = ":3000"
+	// Env. variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	// Set up DB
 	cfg := models.DefaultPostgresConfig()
