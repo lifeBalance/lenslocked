@@ -48,18 +48,8 @@ func main() {
 		log.Fatalf("failed to create mail client: %s", err)
 	}
 
-	// create message
-	msg := models.Email{
-		From:      models.DefaultSender,
-		To:        "devd36629@gmail.com",
-		Subject:   "testing",
-		PlainText: "yo yo yo",
-		HTML:      "<h1>yo yo yo, this is html</h1>",
-	}
-
-	// send the ting
-	err = es.Send(msg)
+	err = es.ForgotPassword("testing@gmail.com", "https://youtube.com")
 	if err != nil {
-		fmt.Println("error sending email %w", err)
+		log.Fatalf("failed to send reset password email: %s", err)
 	}
 }
