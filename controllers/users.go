@@ -196,7 +196,7 @@ func (u Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
 		Password string
 	}
 	data.Token = r.FormValue("token")
-	data.Token = r.FormValue("password")
+	data.Password = r.FormValue("password")
 
 	user, err := u.PasswordResetService.Consume(data.Token)
 	if err != nil {
@@ -207,6 +207,7 @@ func (u Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
 	// Update the user's password in db
 	err = u.UserService.UpdatePassword(user.ID, data.Password)
 	if err != nil {
+		fmt.Println(err)
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
