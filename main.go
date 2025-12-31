@@ -97,6 +97,9 @@ func main() {
 	usersController.Templates.SignIn = views.MustParse(
 		views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"),
 	)
+	usersController.Templates.ForgotPassword = views.MustParse(
+		views.ParseFS(templates.FS, "forgot-pwd.gohtml", "tailwind.gohtml"),
+	)
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -116,7 +119,8 @@ func main() {
 	r.Get("/signin", usersController.SignIn) // send the form
 	r.Post("/signin", usersController.ProcessSignIn)
 	r.Post("/signout", usersController.ProcessSignOut)
-	// r.Get("/users/me", usersController.CurrentUser)
+	r.Get("/forgot-pwd", usersController.ForgotPassword)
+	r.Post("/forgot-pwd", usersController.ProcessForgotPassword)
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(umw.RequireUser)
 		r.Get("/", usersController.CurrentUser)

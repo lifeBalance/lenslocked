@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/lifebalance/lenslocked/context"
 	"github.com/lifebalance/lenslocked/models"
@@ -10,11 +11,15 @@ import (
 
 type Users struct {
 	Templates struct {
-		New    Template
-		SignIn Template
+		New            Template
+		SignIn         Template
+		ForgotPassword Template
+		CheckYourEmail Template
 	}
-	UserService    *models.UserService
-	SessionService *models.SessionService
+	UserService          *models.UserService
+	SessionService       *models.SessionService
+	PasswordResetService *models.PasswordResetService
+	EmailService         *models.EmailService
 }
 
 func (u Users) New(w http.ResponseWriter, r *http.Request) {
@@ -131,4 +136,45 @@ func (umw UserMiddleware) RequireUser(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (u Users) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string
+	}
+	data.Email = r.FormValue("email")
+	u.Templates.ForgotPassword.Execute(w, r, data)
+}
+
+func (u Users) ProcessForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string
+	}
+	data.Email = r.FormValue("email")
+	// Generate pwd reset token
+	passwordReset, err := u.PasswordResetService.Create(data.Email)
+	if err != nil {
+		// TODO: Handle non-existing/wrong email addresses
+		fmt.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	// Send token to user's email
+	vals := url.Values{
+		"token": {passwordReset.Token},
+	}
+	// TODO: add URLs for prod/dev
+	resetUrl := "http://localhost:3000/reset-pwd?" + vals.Encode()
+	err = u.EmailService.ForgotPassword(data.Email, resetUrl)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	// Don't show the reset token in the template, just a friendly message!
+	// Otherwise any baddy could ask for a pwd reset and steal the token!
+	// 2 options:
+	// A. Don't wait - >"IF your email exists in our DB, you'd have received a pwd reset email!"
+	// B. Wait till sent - >"We have sent a pwd reset to the email: some-email@test.com"
+	u.Templates.CheckYourEmail.Execute(w, r, data)
 }
