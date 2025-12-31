@@ -29,12 +29,10 @@ func DefaultPostgresConfig() PostgresConfig {
 	}
 }
 
-func (cfg PostgresConfig) Stringify() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode)
-}
-
 func Open(cfg PostgresConfig) (*sql.DB, error) {
-	conn, err := sql.Open("pgx", cfg.Stringify())
+	stringifiedConfig := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode)
+
+	conn, err := sql.Open("pgx", stringifiedConfig)
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/csrf"
@@ -17,18 +18,64 @@ import (
 	"github.com/lifebalance/lenslocked/views"
 )
 
-func main() {
-	const PORT string = ":3000"
-	// Env. variables
+type config struct {
+	PSQL models.PostgresConfig
+	SMTP models.SMTPConfig
+	CSRF struct {
+		Key    []byte
+		Secure bool
+	}
+	Server struct {
+		Address string
+	}
+}
+
+func loadEnvConfig() (config, error) {
+	var cfg config
+
+	// Load env. variables
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
+		return cfg, err
 	}
 
+	// PSQL
+	cfg.PSQL = models.DefaultPostgresConfig() // TODO: Load from env
+
+	// SMTP
+	smtpConfig, err := loadSMTPConfig()
+	if err != nil {
+		log.Fatalf("failed to load SMTP config: %v", err)
+		return cfg, fmt.Errorf("failed to load SMTP config: %v", err)
+	}
+	cfg.SMTP = smtpConfig
+
+	// CSRF
+	csrfKey, err := rand.RandomBytes(32)
+	if err != nil {
+		log.Fatalf("failed to generate CSRF key: %v", err)
+		return cfg, fmt.Errorf("failed to generate CSRF key: %v", err)
+	}
+	cfg.CSRF.Key = csrfKey  //  TODO: Load from env instead?
+	cfg.CSRF.Secure = false //  TODO: Load from env
+
+	// Server
+	cfg.Server.Address = ":3000" //  TODO: Load from env
+
+	return cfg, nil
+}
+
+func main() {
+	cfg, err := loadEnvConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	const PORT string = ":3000"
+
 	// Set up DB
-	cfg := models.DefaultPostgresConfig()
-	fmt.Println(cfg.Stringify()) // goose postgres "..." status
-	conn, err := sql.Open("pgx", cfg.Stringify())
+	conn, err := models.Open(cfg.PSQL)
 	if err != nil {
 		panic(err)
 	}
@@ -41,26 +88,33 @@ func main() {
 	}
 
 	// Set up services
-	userService := models.UserService{
+	userService := &models.UserService{
 		DB: conn,
 	}
-	sessionService := models.SessionService{
+	sessionService := &models.SessionService{
 		DB: conn,
+	}
+	passwordResetService := &models.PasswordResetService{
+		DB: conn,
+	}
+	emailService, err := models.NewEmailService(cfg.SMTP)
+	if err != nil {
+		panic(err)
 	}
 
 	// Set up the middleware
 	umw := controllers.UserMiddleware{
-		SessionService: &sessionService,
+		SessionService: sessionService,
 	}
 
-	csrfKey, err := rand.RandomBytes(32)
-	if err != nil {
-		log.Fatalf("failed to generate CSRF key: %v", err)
-	}
+	// csrfKey, err := rand.RandomBytes(32)
+	// if err != nil {
+	// 	log.Fatalf("failed to generate CSRF key: %v", err)
+	// }
 
 	csrfMw := csrf.Protect(
-		csrfKey,
-		csrf.Secure(false), // fix this before deploying
+		cfg.CSRF.Key,
+		csrf.Secure(cfg.CSRF.Secure),
 		csrf.TrustedOrigins([]string{
 			"localhost:3000",
 			"localhost:3000/signup",
@@ -88,8 +142,10 @@ func main() {
 
 	// Set up controllers
 	usersController := controllers.Users{
-		UserService:    &userService,
-		SessionService: &sessionService,
+		UserService:          userService,
+		SessionService:       sessionService,
+		PasswordResetService: passwordResetService,
+		EmailService:         emailService,
 	}
 	usersController.Templates.New = views.MustParse(
 		views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"),
@@ -130,8 +186,11 @@ func main() {
 	})
 
 	// Start the server
-	fmt.Println("Starting the server on", PORT)
-	http.ListenAndServe(PORT, r)
+	fmt.Printf("Starting the server on %s\n", cfg.Server.Address)
+	err = http.ListenAndServe(cfg.Server.Address, r)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Wrap any HandlerFunc with this mw to time it.
@@ -142,3 +201,21 @@ func main() {
 // 		fmt.Println("Request time:", time.Since(startTime))
 // 	}
 // }
+
+func loadSMTPConfig() (models.SMTPConfig, error) {
+	portString := os.Getenv("MAILTRAP_PORT")
+	portInt, err := strconv.Atoi(portString)
+	if err != nil {
+		portInt = 2525
+	}
+	cfg := models.SMTPConfig{
+		Host: os.Getenv("MAILTRAP_HOST"),
+		User: os.Getenv("MAILTRAP_USERNAME"),
+		Pass: os.Getenv("MAILTRAP_PASSWORD"),
+		Port: portInt,
+	}
+	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
+		return cfg, fmt.Errorf("missing MAILTRAP_* envs")
+	}
+	return cfg, nil
+}
