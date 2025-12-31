@@ -15,6 +15,7 @@ type Users struct {
 		SignIn         Template
 		ForgotPassword Template
 		CheckYourEmail Template
+		ResetPassword  Template
 	}
 	UserService          *models.UserService
 	SessionService       *models.SessionService
@@ -39,7 +40,7 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
-	session, err := u.SessionService.Upsert(int(user.ID))
+	session, err := u.SessionService.Upsert(uint(user.ID))
 	if err != nil {
 		fmt.Println(err.Error()) // rudimentary logging
 		// TODO: show a warning about the issue
@@ -71,7 +72,7 @@ func (u Users) ProcessSignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
-	session, err := u.SessionService.Upsert(int(user.ID))
+	session, err := u.SessionService.Upsert(uint(user.ID))
 	if err != nil {
 		fmt.Println(err.Error()) // rudimentary logging
 		// TODO: show a warning about the issue
@@ -177,4 +178,45 @@ func (u Users) ProcessForgotPassword(w http.ResponseWriter, r *http.Request) {
 	// A. Don't wait - >"IF your email exists in our DB, you'd have received a pwd reset email!"
 	// B. Wait till sent - >"We have sent a pwd reset to the email: some-email@test.com"
 	u.Templates.CheckYourEmail.Execute(w, r, data)
+}
+
+// Process form submission for token link.
+func (u Users) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Token string
+	}
+	data.Token = r.FormValue("token")
+	u.Templates.ResetPassword.Execute(w, r, data)
+}
+
+// Process form submission for password resetting.
+func (u Users) ProcessResetPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Token    string
+		Password string
+	}
+	data.Token = r.FormValue("token")
+	data.Token = r.FormValue("password")
+
+	user, err := u.PasswordResetService.Consume(data.Token)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	// Update the user's password in db
+	err = u.UserService.UpdatePassword(user.ID, data.Password)
+	if err != nil {
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+	// Sign the user in (set the session).
+	session, err := u.SessionService.Upsert(user.ID)
+	// In case of error, redirect to signin page.
+	if err != nil {
+		fmt.Println(err)
+		http.Redirect(w, r, "/signin", http.StatusFound)
+	}
+	setCookie(w, CookieName, session.Token)
+	http.Redirect(w, r, "/users/me", http.StatusFound)
 }

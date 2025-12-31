@@ -45,7 +45,7 @@ type SessionService struct {
 	BytesPerToken int
 }
 
-func (ss *SessionService) Upsert(userId int) (*Session, error) {
+func (ss *SessionService) Upsert(userId uint) (*Session, error) {
 	bytesPerToken := ss.BytesPerToken
 	// if bytesPerToken < MinBytesPerToken {
 	// 	bytesPerToken = MinBytesPerToken

@@ -30,49 +30,11 @@ type config struct {
 	}
 }
 
-func loadEnvConfig() (config, error) {
-	var cfg config
-
-	// Load env. variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return cfg, err
-	}
-
-	// PSQL
-	cfg.PSQL = models.DefaultPostgresConfig() // TODO: Load from env
-
-	// SMTP
-	smtpConfig, err := loadSMTPConfig()
-	if err != nil {
-		log.Fatalf("failed to load SMTP config: %v", err)
-		return cfg, fmt.Errorf("failed to load SMTP config: %v", err)
-	}
-	cfg.SMTP = smtpConfig
-
-	// CSRF
-	csrfKey, err := rand.RandomBytes(32)
-	if err != nil {
-		log.Fatalf("failed to generate CSRF key: %v", err)
-		return cfg, fmt.Errorf("failed to generate CSRF key: %v", err)
-	}
-	cfg.CSRF.Key = csrfKey  //  TODO: Load from env instead?
-	cfg.CSRF.Secure = false //  TODO: Load from env
-
-	// Server
-	cfg.Server.Address = ":3000" //  TODO: Load from env
-
-	return cfg, nil
-}
-
 func main() {
 	cfg, err := loadEnvConfig()
 	if err != nil {
 		panic(err)
 	}
-
-	const PORT string = ":3000"
 
 	// Set up DB
 	conn, err := models.Open(cfg.PSQL)
@@ -156,6 +118,12 @@ func main() {
 	usersController.Templates.ForgotPassword = views.MustParse(
 		views.ParseFS(templates.FS, "forgot-pwd.gohtml", "tailwind.gohtml"),
 	)
+	usersController.Templates.CheckYourEmail = views.MustParse(
+		views.ParseFS(templates.FS, "check-your-email.gohtml", "tailwind.gohtml"),
+	)
+	usersController.Templates.ResetPassword = views.MustParse(
+		views.ParseFS(templates.FS, "reset-pwd.gohtml", "tailwind.gohtml"),
+	)
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -177,6 +145,8 @@ func main() {
 	r.Post("/signout", usersController.ProcessSignOut)
 	r.Get("/forgot-pwd", usersController.ForgotPassword)
 	r.Post("/forgot-pwd", usersController.ProcessForgotPassword)
+	r.Get("/reset-pwd", usersController.ResetPassword)
+	r.Post("/reset-pwd", usersController.ProcessResetPassword)
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(umw.RequireUser)
 		r.Get("/", usersController.CurrentUser)
@@ -217,5 +187,41 @@ func loadSMTPConfig() (models.SMTPConfig, error) {
 	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
 		return cfg, fmt.Errorf("missing MAILTRAP_* envs")
 	}
+	return cfg, nil
+}
+
+func loadEnvConfig() (config, error) {
+	var cfg config
+
+	// Load env. variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+		return cfg, err
+	}
+
+	// PSQL
+	cfg.PSQL = models.DefaultPostgresConfig() // TODO: Load from env
+
+	// SMTP
+	smtpConfig, err := loadSMTPConfig()
+	if err != nil {
+		log.Fatalf("failed to load SMTP config: %v", err)
+		return cfg, fmt.Errorf("failed to load SMTP config: %v", err)
+	}
+	cfg.SMTP = smtpConfig
+
+	// CSRF
+	csrfKey, err := rand.RandomBytes(32)
+	if err != nil {
+		log.Fatalf("failed to generate CSRF key: %v", err)
+		return cfg, fmt.Errorf("failed to generate CSRF key: %v", err)
+	}
+	cfg.CSRF.Key = csrfKey  //  TODO: Load from env instead?
+	cfg.CSRF.Secure = false //  TODO: Load from env
+
+	// Server
+	cfg.Server.Address = ":3000" //  TODO: Load from env
+
 	return cfg, nil
 }

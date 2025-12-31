@@ -1,0 +1,60 @@
+{{template "header" .}}
+<div class="flex-1 flex justify-center items-center">
+  <div class="px-8 py-8 rounded shadow">
+    <h1 class="pt-4 pb-4 text-center text-3xl font-bold text-gray-600">
+      Enter New Password
+    </h1>
+    <form action="/reset-pwd" method="post">
+      <div class="hidden">{{ csrfField }}</div>
+      <div class="py-2">
+        <label for="password" class="text-sm font-semibold text-gray-700"
+          >New Password</label
+        >
+        <input
+          class="w-full px-3 py-2 border border-gray-300 placeholder-gray-600 text-gray-800 rounded"
+          type="password"
+          name="password"
+          id="password"
+          placeholder="Password"
+          required
+          autofocus
+        />
+      </div>
+      {{if .Token}}
+      <div class="hidden">
+        <input type="hidden" id="token" name="token" value="{{.Token}}" />
+      </div>
+      {{else}}
+      <div class="py-2">
+        <label for="token" class="text-sm font-semibold text-gray-700"
+          >Password Reset Token</label
+        >
+        <input
+          class="w-full px-3 py-2 border border-gray-300 placeholder-gray-600 text-gray-800 rounded"
+          type="text"
+          name="token"
+          id="token"
+          placeholder="Paste the token from your email"
+          required
+        />
+      </div>
+      {{ end }}
+      <div class="py-4">
+        <button
+          type="submit"
+          class="w-full py-4 px-2 bg-blue-600 hover:bg-indigo-700 text-white rounded font-bold text-lg cursor-pointer"
+        >
+          Update Password
+        </button>
+      </div>
+      <div class="py-2 w-full flex flex-col gap-4 text-xs text-gray-600">
+        <p>
+          Need an account?
+          <a href="/signup" class="underline">Sign Up</a>
+        </p>
+        <p><a href="/signin">Remembered your password?</a></p>
+      </div>
+    </form>
+  </div>
+</div>
+{{template "footer" .}}
