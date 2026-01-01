@@ -11,10 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	ErrEmailTaken = errors.New("email address already taken")
-)
-
 type User struct {
 	ID           uint
 	Email        string
