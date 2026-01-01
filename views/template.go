@@ -28,6 +28,13 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 			"currentUser": func() (template.HTML, error) {
 				return "", fmt.Errorf("currentUser not implemented")
 			},
+			"errors": func() []string {
+				return []string{
+					"Don't do that!",
+					"The email you provided is already associated with an account.",
+					"Something went wrong!",
+				}
+			},
 		},
 	)
 	tpl, err := tpl.ParseFS(fs, patterns...)
