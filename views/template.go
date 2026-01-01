@@ -2,6 +2,7 @@ package views
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -13,6 +14,10 @@ import (
 	"github.com/lifebalance/lenslocked/context"
 	"github.com/lifebalance/lenslocked/models"
 )
+
+type publicError interface {
+	Public() string
+}
 
 type Template struct {
 	htmlTpl *template.Template
@@ -59,6 +64,7 @@ func (t Template) Execute(
 		log.Printf("cloning template: %v", err)
 		http.Error(w, "Error cloning the template", http.StatusInternalServerError)
 	}
+	errMsgs := extractErrorMessages(errs...)
 	tpl = tpl.Funcs(template.FuncMap{
 		"csrfField": func() template.HTML {
 			return csrf.TemplateField(r)
@@ -67,11 +73,7 @@ func (t Template) Execute(
 			return context.User(r.Context())
 		},
 		"errors": func() []string {
-			var errMessages []string
-			for _, err := range errs {
-				errMessages = append(errMessages, err.Error()) // Extract msgs
-			}
-			return errMessages
+			return errMsgs
 		},
 	})
 	w.Header().Set("Content-type", "text/html; charset=utf-8")
@@ -85,4 +87,18 @@ func (t Template) Execute(
 		http.Error(w, "Error executing the template", http.StatusInternalServerError)
 	}
 	io.Copy(w, &buf)
+}
+
+func extractErrorMessages(errs ...error) []string {
+	var messages []string
+	for _, err := range errs {
+		var pubErr publicError
+		if errors.As(err, &pubErr) {
+			messages = append(messages, pubErr.Public()) // Extract msgs
+		} else {
+			fmt.Println(err) // rudimentary logging
+			messages = append(messages, "Something went wrong")
+		}
+	}
+	return messages
 }

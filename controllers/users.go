@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/lifebalance/lenslocked/apperrors"
 	"github.com/lifebalance/lenslocked/context"
 	"github.com/lifebalance/lenslocked/models"
 )
@@ -40,6 +42,9 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 	data.Password = r.FormValue("password")
 	user, err := u.UserService.Create(data.Email, data.Password)
 	if err != nil {
+		if errors.Is(err, models.ErrEmailTaken) {
+			err = apperrors.Public(err, "That email is already taken")
+		}
 		u.Templates.New.Execute(w, r, data, err)
 		fmt.Println(err.Error()) // rudimentary logging
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
