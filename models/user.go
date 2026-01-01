@@ -2,10 +2,17 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrEmailTaken = errors.New("email address already taken")
 )
 
 type User struct {
@@ -38,7 +45,13 @@ func (us *UserService) Create(email, password string) (*User, error) {
 	`, email, hashString)
 	err = row.Scan(&user.ID)
 	if err != nil {
-		return nil, fmt.Errorf("create user: %w", err)
+		fmt.Println(err)          // ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505) 23505
+		var pgErr *pgconn.PgError // Variable needed to use errors.As
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			fmt.Println(pgErr) // ERROR: duplicate key value violates unique constraint "users_email_key" (SQLSTATE 23505) 23505
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("models: create: %w", err) // too much info for the baddies
 	}
 	return &user, nil
 }
