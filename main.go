@@ -134,6 +134,13 @@ func main() {
 			"tailwind.gohtml",
 		),
 	)
+	galleriesController.Templates.Edit = views.MustParse(
+		views.ParseFS(
+			templates.FS,
+			"galleries/edit.gohtml",
+			"tailwind.gohtml",
+		),
+	)
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -148,10 +155,10 @@ func main() {
 	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
 	r.Get("/faq", controllers.FAQ(tpl))
 
-	r.Get("/signup", usersController.New) // send the form
-	r.Post("/users", usersController.Create)
-	r.Get("/signin", usersController.SignIn) // send the form
-	r.Post("/signin", usersController.ProcessSignIn)
+	r.Get("/signup", usersController.New)            // send the form
+	r.Post("/users", usersController.Create)         // process the form
+	r.Get("/signin", usersController.SignIn)         // send the form
+	r.Post("/signin", usersController.ProcessSignIn) // process the form
 	r.Post("/signout", usersController.ProcessSignOut)
 	r.Get("/forgot-pwd", usersController.ForgotPassword)
 	r.Post("/forgot-pwd", usersController.ProcessForgotPassword)
@@ -165,6 +172,8 @@ func main() {
 		// Group is needed so that only CREATING galleries require an authenticated user
 		r.Group(func(r chi.Router) {
 			r.Use(umw.RequireUser)
+			r.Get("/{id}/edit", galleriesController.Edit)    // send the form
+			r.Post("/{id}/edit", galleriesController.Update) // process the form
 			r.Get("/new", galleriesController.New)
 			r.Post("/", galleriesController.Create)
 		})

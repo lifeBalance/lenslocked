@@ -1,16 +1,20 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/lifebalance/lenslocked/context"
 	"github.com/lifebalance/lenslocked/models"
 )
 
 type Galleries struct {
 	Templates struct {
-		New Template
+		New  Template
+		Edit Template
 	}
 	GalleryService *models.GalleryService
 }
@@ -41,4 +45,65 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	editGalleryPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
 	http.Redirect(w, r, editGalleryPath, http.StatusFound)
+}
+
+// Render form to edit a gallery
+func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusNotFound)
+		return
+	}
+	gallery, err := g.GalleryService.GalleryById(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			http.Error(w, "gallery not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
+		return
+	}
+	data := struct {
+		ID    int
+		Title string
+	}{
+		ID:    gallery.ID,
+		Title: gallery.Title,
+	}
+	g.Templates.Edit.Execute(w, r, data) // render title in the template
+}
+
+// Process form submission to edit a gallery
+func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusNotFound)
+		return
+	}
+	gallery, err := g.GalleryService.GalleryById(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			http.Error(w, "gallery not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
+		return
+	}
+
+	gallery.Title = r.FormValue("title")
+	err = g.GalleryService.UpdateGallery(gallery)
+	if err != nil {
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
 }
