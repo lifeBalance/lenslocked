@@ -148,6 +148,13 @@ func main() {
 			"tailwind.gohtml",
 		),
 	)
+	galleriesController.Templates.Show = views.MustParse(
+		views.ParseFS(
+			templates.FS,
+			"galleries/show.gohtml",
+			"tailwind.gohtml",
+		),
+	)
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -176,6 +183,7 @@ func main() {
 		r.Get("/", usersController.CurrentUser)
 	})
 	r.Route("/galleries", func(r chi.Router) {
+		r.Get("/{id}", galleriesController.Show) // anybody can see galleries
 		// Group is needed so that only CREATING galleries require an authenticated user
 		r.Group(func(r chi.Router) {
 			r.Use(umw.RequireUser)

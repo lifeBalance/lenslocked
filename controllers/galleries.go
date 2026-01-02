@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -14,8 +15,9 @@ import (
 type Galleries struct {
 	Templates struct {
 		New   Template
-		Edit  Template
 		Index Template
+		Show  Template
+		Edit  Template
 	}
 	GalleryService *models.GalleryService
 }
@@ -133,4 +135,36 @@ func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	g.Templates.Index.Execute(w, r, data)
 
+}
+
+func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusNotFound)
+		return
+	}
+	gallery, err := g.GalleryService.GalleryById(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			http.Error(w, "gallery not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	var mockGallery []string
+	for range 20 {
+		w, h := rand.Intn(500)+200, rand.Intn(500)+200
+		catImgUrl := fmt.Sprintf("https://picsum.photos/%d/%d", w, h)
+		mockGallery = append(mockGallery, catImgUrl)
+	}
+	data := struct {
+		ID     int
+		Title  string
+		Images []string
+	}{
+		ID:     gallery.ID,
+		Title:  gallery.Title,
+		Images: mockGallery,
+	}
+	g.Templates.Show.Execute(w, r, data)
 }
