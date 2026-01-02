@@ -142,7 +142,7 @@ func (umw UserMiddleware) RequireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := context.User(r.Context())
 		if user == nil {
-			http.Redirect(w, r, "/signing", http.StatusFound)
+			http.Redirect(w, r, "/signin", http.StatusFound)
 			return
 		}
 		next.ServeHTTP(w, r)

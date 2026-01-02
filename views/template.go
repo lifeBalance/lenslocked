@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"path"
 
 	"github.com/gorilla/csrf"
 	"github.com/lifebalance/lenslocked/context"
@@ -24,7 +25,14 @@ type Template struct {
 }
 
 func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
-	tpl := template.New(patterns[0])
+	// Debugging templates in nested folders (galleries/new.gohtml)
+	// fmt.Println("1", patterns)    // 1 [galleries/new.gohtml tailwind.gohtml]
+	// fmt.Println("2", patterns[0]) // 2 galleries/new.gohtml
+
+	// 'Base' extracts the filename, w/o the parent folder.
+	// fmt.Println("3", path.Base(patterns[0])) // 3 new.gohtml
+
+	tpl := template.New(path.Base(patterns[0]))
 	tpl = tpl.Funcs(
 		template.FuncMap{
 			"csrfField": func() (template.HTML, error) {

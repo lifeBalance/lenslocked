@@ -1,5 +1,6 @@
 .DS_Store
 opencode.jsonc
+opencode.jsonc.bak
 .air.toml
 tmp/
 .env

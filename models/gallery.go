@@ -8,7 +8,7 @@ import (
 
 type Gallery struct {
 	ID     int
-	UserID int
+	UserID uint
 	Title  string
 }
 
@@ -16,7 +16,7 @@ type GalleryService struct {
 	DB *sql.DB
 }
 
-func (svc *GalleryService) Create(title string, userId int) (*Gallery, error) {
+func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 	gallery := Gallery{
 		Title:  title,
 		UserID: userId,
@@ -52,7 +52,7 @@ func (svc *GalleryService) GalleryById(id int) (*Gallery, error) {
 	return &gallery, nil
 }
 
-func (svc *GalleryService) GalleriesByUserId(userId int) ([]Gallery, error) {
+func (svc *GalleryService) GalleriesByUserId(userId uint) ([]Gallery, error) {
 	rows, err := svc.DB.Query(`
 		SELECT id, title
 		FROM galleries

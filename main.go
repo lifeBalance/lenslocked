@@ -13,7 +13,6 @@ import (
 	"github.com/lifebalance/lenslocked/controllers"
 	"github.com/lifebalance/lenslocked/migrations"
 	"github.com/lifebalance/lenslocked/models"
-	"github.com/lifebalance/lenslocked/rand"
 	"github.com/lifebalance/lenslocked/templates"
 	"github.com/lifebalance/lenslocked/views"
 )
@@ -49,7 +48,7 @@ func main() {
 		panic(err)
 	}
 
-	// Set up services
+	// User services
 	userService := &models.UserService{
 		DB: conn,
 	}
@@ -63,32 +62,32 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// Gallery services
+	galleryService := &models.GalleryService{
+		DB: conn,
+	}
 
 	// Set up the middleware
 	umw := controllers.UserMiddleware{
 		SessionService: sessionService,
 	}
 
-	// csrfKey, err := rand.RandomBytes(32)
-	// if err != nil {
-	// 	log.Fatalf("failed to generate CSRF key: %v", err)
-	// }
-
 	csrfMw := csrf.Protect(
 		cfg.CSRF.Key,
+		csrf.Path("/"),
 		csrf.Secure(cfg.CSRF.Secure),
 		csrf.TrustedOrigins([]string{
 			"localhost:3000",
-			"localhost:3000/signup",
-			"localhost:3000/signin",
 		}),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 			log.Printf("CSRF validation failed!")
 			log.Printf("Method: %s", r.Method)
 			log.Printf("Path: %s", r.URL.Path)
 			log.Printf("Origin: %s", r.Header.Get("Origin"))
 			log.Printf("Referer: %s", r.Header.Get("Referer"))
 			log.Printf("Token from form: %s", r.FormValue("gorilla.csrf.Token"))
+			log.Println("failure reason:", csrf.FailureReason(r))
 
 			// Check for CSRF cookie
 			cookie, err := r.Cookie("_gorilla_csrf")
@@ -102,7 +101,7 @@ func main() {
 		})),
 	)
 
-	// Set up controllers
+	// Users controllers
 	usersController := controllers.Users{
 		UserService:          userService,
 		SessionService:       sessionService,
@@ -123,6 +122,17 @@ func main() {
 	)
 	usersController.Templates.ResetPassword = views.MustParse(
 		views.ParseFS(templates.FS, "reset-pwd.gohtml", "tailwind.gohtml"),
+	)
+	// Galleries controllers
+	galleriesController := controllers.Galleries{
+		GalleryService: galleryService,
+	}
+	galleriesController.Templates.New = views.MustParse(
+		views.ParseFS(
+			templates.FS,
+			"galleries/new.gohtml",
+			"tailwind.gohtml",
+		),
 	)
 
 	// Set up router and routes
@@ -150,6 +160,14 @@ func main() {
 	r.Route("/users/me", func(r chi.Router) {
 		r.Use(umw.RequireUser)
 		r.Get("/", usersController.CurrentUser)
+	})
+	r.Route("/galleries", func(r chi.Router) {
+		// Group is needed so that only CREATING galleries require an authenticated user
+		r.Group(func(r chi.Router) {
+			r.Use(umw.RequireUser)
+			r.Get("/new", galleriesController.New)
+			r.Post("/", galleriesController.Create)
+		})
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -212,13 +230,16 @@ func loadEnvConfig() (config, error) {
 	cfg.SMTP = smtpConfig
 
 	// CSRF
-	csrfKey, err := rand.RandomBytes(32)
-	if err != nil {
-		log.Fatalf("failed to generate CSRF key: %v", err)
-		return cfg, fmt.Errorf("failed to generate CSRF key: %v", err)
+	csrfSecureString := os.Getenv("CSRF_SECURE")
+	csrfKeyString := os.Getenv("CSRF_KEY")
+	if csrfKeyString == "" || csrfSecureString == "" {
+		return cfg, fmt.Errorf("missing CSRF env. var.")
 	}
-	cfg.CSRF.Key = csrfKey  //  TODO: Load from env instead?
-	cfg.CSRF.Secure = false //  TODO: Load from env
+	cfg.CSRF.Secure, err = strconv.ParseBool(csrfSecureString)
+	if err != nil {
+		log.Fatalf("woops %v", err)
+	}
+	cfg.CSRF.Key = []byte(csrfKeyString)
 
 	// Server
 	cfg.Server.Address = ":3000" //  TODO: Load from env
