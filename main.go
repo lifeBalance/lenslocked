@@ -141,6 +141,13 @@ func main() {
 			"tailwind.gohtml",
 		),
 	)
+	galleriesController.Templates.Index = views.MustParse(
+		views.ParseFS(
+			templates.FS,
+			"galleries/index.gohtml",
+			"tailwind.gohtml",
+		),
+	)
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -176,6 +183,7 @@ func main() {
 			r.Post("/{id}/edit", galleriesController.Update) // process the form
 			r.Get("/new", galleriesController.New)
 			r.Post("/", galleriesController.Create)
+			r.Get("/", galleriesController.Index)
 		})
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

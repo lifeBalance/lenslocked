@@ -10,6 +10,7 @@
     <header class="bg-gradient-to-r from-blue-800 to-purple-800 text-white">
       <nav class="px-8 py-6 flex items-center">
         <div class="text-4xl pr-12">📸 Lenslocked</div>
+        <!-- Left side -->
         <div class="flex-grow">
           <a class="text-lg font-semibold hover:text-blue-200 pr-8" href="/"
             >Home</a
@@ -23,8 +24,15 @@
             >FAQ</a
           >
         </div>
+
+        <!-- Right side -->
         <div>
           {{if currentUser}}
+          <a
+            class="text-lg font-semibold hover:text-blue-200 pr-8"
+            href="/galleries"
+            >My Galleries
+          </a>
           <form action="/signout" method="post" class="inline pr-4">
             <div class="hidden">
               {{ csrfField }}
@@ -54,7 +62,9 @@
     {{if errors}}
     <div class="py-4 px-2">
       {{range errors}}
-      <div class="closeable flex bg-red-100 rounded px-2 py-2 text-red-800 mb-2">
+      <div
+        class="closeable flex bg-red-100 rounded px-2 py-2 text-red-800 mb-2"
+      >
         <p class="flex-grow">
           {{.}}
         </p>
@@ -104,9 +114,9 @@
     <script>
       function closeAlert(event) {
         // console.log(event);
-        let closeable = event.target.closest(".closeable")
+        let closeable = event.target.closest(".closeable");
         // closeable.remove() // Alternative
-        closeable.classList.add("hidden")
+        closeable.classList.add("hidden");
       }
     </script>
   </body>
