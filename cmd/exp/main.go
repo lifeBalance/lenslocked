@@ -13,6 +13,6 @@ func main() {
 		panic(err)
 	}
 	for _, i := range imgs {
-		fmt.Println(i.Path)
+		fmt.Println(i.Path, "\t\t", i.Filename)
 	}
 }

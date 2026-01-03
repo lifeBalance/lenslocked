@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -58,30 +57,7 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	// if err != nil {
-	// 	http.Error(w, "invalid id", http.StatusNotFound)
-	// 	return
-	// }
-	// gallery, err := g.GalleryService.GalleryById(id)
-	// if err != nil {
-	// 	if errors.Is(err, models.ErrNotFound) {
-	// 		http.Error(w, "gallery not found", http.StatusNotFound)
-	// 		return
-	// 	}
-	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
-	// }
 
-	// err = userMustOwnGallery(w, r, gallery)
-	// if err != nil {
-	// 	return
-	// }
-
-	// user := context.User(r.Context())
-	// if gallery.UserID != user.ID {
-	// 	http.Error(w, "you can't edit this gallery", http.StatusForbidden)
-	// 	return
-	// }
 	data := struct {
 		ID    int
 		Title string
@@ -98,30 +74,6 @@ func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	// if err != nil {
-	// 	http.Error(w, "invalid id", http.StatusNotFound)
-	// 	return
-	// }
-	// gallery, err := g.GalleryService.GalleryById(id)
-	// if err != nil {
-	// 	if errors.Is(err, models.ErrNotFound) {
-	// 		http.Error(w, "gallery not found", http.StatusNotFound)
-	// 		return
-	// 	}
-	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
-	// }
-
-	// err = userMustOwnGallery(w, r, gallery)
-	// if err != nil {
-	// 	return
-	// }
-
-	// user := context.User(r.Context())
-	// if gallery.UserID != user.ID {
-	// 	http.Error(w, "you can't edit this gallery", http.StatusForbidden)
-	// 	return
-	// }
 
 	gallery.Title = r.FormValue("title")
 	err = g.GalleryService.UpdateGallery(gallery)
@@ -163,34 +115,32 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	// if err != nil {
-	// 	http.Error(w, "invalid id", http.StatusNotFound)
-	// 	return
-	// }
-	// gallery, err := g.GalleryService.GalleryById(id)
-	// if err != nil {
-	// 	if errors.Is(err, models.ErrNotFound) {
-	// 		http.Error(w, "gallery not found", http.StatusNotFound)
-	// 		return
-	// 	}
-	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
-	// }
-	var mockGallery []string
-	for range 20 {
-		w, h := rand.Intn(500)+200, rand.Intn(500)+200
-		catImgUrl := fmt.Sprintf("https://picsum.photos/%d/%d", w, h)
-		mockGallery = append(mockGallery, catImgUrl)
+
+	type Image struct {
+		GalleryID int
+		Filename  string
 	}
+	// data for the template
 	data := struct {
 		ID     int
 		Title  string
-		Images []string
+		Images []Image
 	}{
-		ID:     gallery.ID,
-		Title:  gallery.Title,
-		Images: mockGallery,
+		ID:    gallery.ID,
+		Title: gallery.Title,
 	}
+	images, err := g.GalleryService.Images(gallery.ID)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	for _, img := range images {
+		data.Images = append(data.Images, Image{
+			GalleryID: gallery.ID,
+			Filename:  img.Filename,
+		})
+	}
+
 	g.Templates.Show.Execute(w, r, data)
 }
 
@@ -205,6 +155,35 @@ func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/galleries", http.StatusFound)
+}
+
+func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
+	filename := chi.URLParam(r, "filename")
+	galleryId, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusNotFound)
+		return
+	}
+	images, err := g.GalleryService.Images(galleryId)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+	var requestedImage models.Image
+	imageFound := false
+	for _, img := range images {
+		if img.Filename == filename {
+			requestedImage = img
+			imageFound = true
+			break
+		}
+	}
+	if !imageFound {
+		http.Error(w, "image not found", http.StatusNotFound)
+		return
+	}
+	http.ServeFile(w, r, requestedImage.Path)
 }
 
 // Loads and returns the gallery referenced by the route param `id`.

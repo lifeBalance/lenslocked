@@ -184,6 +184,7 @@ func main() {
 	})
 	r.Route("/galleries", func(r chi.Router) {
 		r.Get("/{id}", galleriesController.Show) // anybody can see galleries
+		r.Get("/{id}/images/{filename}", galleriesController.Image)
 		// Group is needed so that only CREATING galleries require an authenticated user
 		r.Group(func(r chi.Router) {
 			r.Use(umw.RequireUser)
