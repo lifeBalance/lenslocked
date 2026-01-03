@@ -164,26 +164,17 @@ func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusNotFound)
 		return
 	}
-	images, err := g.GalleryService.Images(galleryId)
+	image, err := g.GalleryService.Image(galleryId, filename)
 	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			http.Error(w, "image not found", http.StatusNotFound)
+			return
+		}
 		fmt.Println(err)
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 		return
 	}
-	var requestedImage models.Image
-	imageFound := false
-	for _, img := range images {
-		if img.Filename == filename {
-			requestedImage = img
-			imageFound = true
-			break
-		}
-	}
-	if !imageFound {
-		http.Error(w, "image not found", http.StatusNotFound)
-		return
-	}
-	http.ServeFile(w, r, requestedImage.Path)
+	http.ServeFile(w, r, image.Path)
 }
 
 // Loads and returns the gallery referenced by the route param `id`.

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -129,6 +130,23 @@ func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 		}
 	}
 	return images, nil
+}
+
+func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) {
+	imgPath := filepath.Join(svc.galleryDir(galleryId), filename)
+	_, err := os.Stat(imgPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Image{}, ErrNotFound
+		}
+		return Image{}, fmt.Errorf("querying single image: %w", err)
+	}
+
+	return Image{
+		Filename:  filename,
+		GalleryID: galleryId,
+		Path:      imgPath,
+	}, nil
 }
 
 func (svc *GalleryService) supportedExtensions() []string {
