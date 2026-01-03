@@ -52,19 +52,23 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 
 // Render form to edit a gallery
 func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	gallery, err := g.galleryById(w, r)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusNotFound)
 		return
 	}
-	gallery, err := g.GalleryService.GalleryById(id)
-	if err != nil {
-		if errors.Is(err, models.ErrNotFound) {
-			http.Error(w, "gallery not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "something went wrong", http.StatusInternalServerError)
-	}
+	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	// if err != nil {
+	// 	http.Error(w, "invalid id", http.StatusNotFound)
+	// 	return
+	// }
+	// gallery, err := g.GalleryService.GalleryById(id)
+	// if err != nil {
+	// 	if errors.Is(err, models.ErrNotFound) {
+	// 		http.Error(w, "gallery not found", http.StatusNotFound)
+	// 		return
+	// 	}
+	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
+	// }
 	user := context.User(r.Context())
 	if gallery.UserID != user.ID {
 		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
@@ -82,19 +86,23 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 
 // Process form submission to edit a gallery
 func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	gallery, err := g.galleryById(w, r)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusNotFound)
 		return
 	}
-	gallery, err := g.GalleryService.GalleryById(id)
-	if err != nil {
-		if errors.Is(err, models.ErrNotFound) {
-			http.Error(w, "gallery not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "something went wrong", http.StatusInternalServerError)
-	}
+	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	// if err != nil {
+	// 	http.Error(w, "invalid id", http.StatusNotFound)
+	// 	return
+	// }
+	// gallery, err := g.GalleryService.GalleryById(id)
+	// if err != nil {
+	// 	if errors.Is(err, models.ErrNotFound) {
+	// 		http.Error(w, "gallery not found", http.StatusNotFound)
+	// 		return
+	// 	}
+	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
+	// }
 	user := context.User(r.Context())
 	if gallery.UserID != user.ID {
 		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
@@ -138,19 +146,23 @@ func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	gallery, err := g.galleryById(w, r)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusNotFound)
 		return
 	}
-	gallery, err := g.GalleryService.GalleryById(id)
-	if err != nil {
-		if errors.Is(err, models.ErrNotFound) {
-			http.Error(w, "gallery not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, "something went wrong", http.StatusInternalServerError)
-	}
+	// id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	// if err != nil {
+	// 	http.Error(w, "invalid id", http.StatusNotFound)
+	// 	return
+	// }
+	// gallery, err := g.GalleryService.GalleryById(id)
+	// if err != nil {
+	// 	if errors.Is(err, models.ErrNotFound) {
+	// 		http.Error(w, "gallery not found", http.StatusNotFound)
+	// 		return
+	// 	}
+	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
+	// }
 	var mockGallery []string
 	for range 20 {
 		w, h := rand.Intn(500)+200, rand.Intn(500)+200
@@ -167,4 +179,31 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		Images: mockGallery,
 	}
 	g.Templates.Show.Execute(w, r, data)
+}
+
+// Loads and returns the gallery referenced by the route param `id`.
+//
+// In case of error, it returns it, and handles the HTTP error response when:
+//
+// - the `id` URL param is not an int (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - the lookup fails for other reasons (500)
+func (g Galleries) galleryById(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusNotFound)
+		return nil, err
+	}
+	gallery, err := g.GalleryService.GalleryById(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			http.Error(w, "gallery not found", http.StatusNotFound)
+			return nil, err
+
+		}
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	return gallery, nil
 }
