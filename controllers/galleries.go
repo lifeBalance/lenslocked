@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -117,8 +118,9 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Image struct {
-		GalleryID int
-		Filename  string
+		GalleryID       int
+		Filename        string
+		FilenameEscaped string
 	}
 	// data for the template
 	data := struct {
@@ -136,8 +138,9 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, img := range images {
 		data.Images = append(data.Images, Image{
-			GalleryID: gallery.ID,
-			Filename:  img.Filename,
+			GalleryID:       gallery.ID,
+			Filename:        img.Filename,
+			FilenameEscaped: url.PathEscape(img.Filename),
 		})
 	}
 
