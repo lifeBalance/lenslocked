@@ -156,7 +156,6 @@ func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	g.Templates.Index.Execute(w, r, data)
-
 }
 
 func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
@@ -193,6 +192,19 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		Images: mockGallery,
 	}
 	g.Templates.Show.Execute(w, r, data)
+}
+
+func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r)
+	if err != nil {
+		return
+	}
+	err = g.GalleryService.DeleteGallery(gallery.ID)
+	if err != nil {
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 // Loads and returns the gallery referenced by the route param `id`.

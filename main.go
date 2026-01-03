@@ -192,6 +192,7 @@ func main() {
 			r.Get("/new", galleriesController.New)
 			r.Post("/", galleriesController.Create)
 			r.Get("/", galleriesController.Index)
+			r.Post("/{id}/delete", galleriesController.Delete)
 		})
 	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
