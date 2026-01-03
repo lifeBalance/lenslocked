@@ -149,6 +149,19 @@ func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) 
 	}, nil
 }
 
+func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
+	img, err := svc.Image(galleryId, filename)
+	if err != nil {
+		return fmt.Errorf("delete image: %w", err)
+	}
+
+	err = os.Remove(img.Path)
+	if err != nil {
+		return fmt.Errorf("delete image: %w", err)
+	}
+	return nil
+}
+
 func (svc *GalleryService) supportedExtensions() []string {
 	// TODO: Set up list of supported extensions in .env or config.
 	return []string{".png", ".jpg", ".jpeg", ".gif"}
