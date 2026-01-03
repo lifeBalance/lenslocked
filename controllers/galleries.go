@@ -22,6 +22,8 @@ type Galleries struct {
 	GalleryService *models.GalleryService
 }
 
+type galleryOpt func(http.ResponseWriter, *http.Request, *models.Gallery) error
+
 // Render form to create a new gallery
 func (g Galleries) New(w http.ResponseWriter, r *http.Request) {
 	var data struct {
@@ -52,7 +54,7 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 
 // Render form to edit a gallery
 func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(w, r)
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
 		return
 	}
@@ -69,11 +71,17 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 	// 	}
 	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
 	// }
-	user := context.User(r.Context())
-	if gallery.UserID != user.ID {
-		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
-		return
-	}
+
+	// err = userMustOwnGallery(w, r, gallery)
+	// if err != nil {
+	// 	return
+	// }
+
+	// user := context.User(r.Context())
+	// if gallery.UserID != user.ID {
+	// 	http.Error(w, "you can't edit this gallery", http.StatusForbidden)
+	// 	return
+	// }
 	data := struct {
 		ID    int
 		Title string
@@ -86,7 +94,7 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 
 // Process form submission to edit a gallery
 func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(w, r)
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
 		return
 	}
@@ -103,11 +111,17 @@ func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 	// 	}
 	// 	http.Error(w, "something went wrong", http.StatusInternalServerError)
 	// }
-	user := context.User(r.Context())
-	if gallery.UserID != user.ID {
-		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
-		return
-	}
+
+	// err = userMustOwnGallery(w, r, gallery)
+	// if err != nil {
+	// 	return
+	// }
+
+	// user := context.User(r.Context())
+	// if gallery.UserID != user.ID {
+	// 	http.Error(w, "you can't edit this gallery", http.StatusForbidden)
+	// 	return
+	// }
 
 	gallery.Title = r.FormValue("title")
 	err = g.GalleryService.UpdateGallery(gallery)
@@ -190,7 +204,11 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 // - the gallery doesn't exist (404)
 //
 // - the lookup fails for other reasons (500)
-func (g Galleries) galleryById(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
+func (g Galleries) galleryById(
+	w http.ResponseWriter,
+	r *http.Request,
+	opts ...galleryOpt,
+) (*models.Gallery, error) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusNotFound)
@@ -205,5 +223,25 @@ func (g Galleries) galleryById(w http.ResponseWriter, r *http.Request) (*models.
 		}
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
 	}
+	// Run functional options.
+	for _, opt := range opts {
+		err = opt(w, r, gallery)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return gallery, nil
+}
+
+func userMustOwnGallery(
+	w http.ResponseWriter,
+	r *http.Request,
+	gallery *models.Gallery,
+) error {
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "you can't edit this gallery", http.StatusForbidden)
+		return fmt.Errorf("user does not have access to this gallery")
+	}
+	return nil
 }
