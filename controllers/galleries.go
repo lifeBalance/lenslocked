@@ -59,12 +59,32 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type Image struct {
+		GalleryID       int
+		Filename        string
+		FilenameEscaped string
+	}
+
 	data := struct {
-		ID    int
-		Title string
+		ID     int
+		Title  string
+		Images []Image
 	}{
 		ID:    gallery.ID,
 		Title: gallery.Title,
+	}
+	// Attach the images to the data
+	images, err := g.GalleryService.Images(gallery.ID)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	for _, img := range images {
+		data.Images = append(data.Images, Image{
+			GalleryID:       gallery.ID,
+			Filename:        img.Filename,
+			FilenameEscaped: url.PathEscape(img.Filename),
+		})
 	}
 	g.Templates.Edit.Execute(w, r, data) // render title in the template
 }
