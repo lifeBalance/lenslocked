@@ -182,8 +182,17 @@ func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 //
 // - checking the file fails for other reasons
 func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) {
-	imgPath := filepath.Join(svc.galleryDir(galleryId), filename)
-	_, err := os.Stat(imgPath)
+	galleryDir := svc.galleryDir(galleryId)
+
+	sanitizedPath, err := sanitizedGalleryPath(galleryDir, filename)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Image{}, ErrNotFound
+		}
+		return Image{}, fmt.Errorf("querying single image: %w", err)
+	}
+
+	_, err = os.Stat(sanitizedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return Image{}, ErrNotFound
@@ -192,9 +201,9 @@ func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) 
 	}
 
 	return Image{
-		Filename:  filename,
+		Filename:  filepath.Base(sanitizedPath),
 		GalleryID: galleryId,
-		Path:      imgPath,
+		Path:      sanitizedPath,
 	}, nil
 }
 
@@ -216,6 +225,31 @@ func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
 		return fmt.Errorf("delete image: %w", err)
 	}
 	return nil
+}
+
+// sanitizedGalleryPath ensures filename resolves within galleryDir.
+func sanitizedGalleryPath(galleryDir, filename string) (string, error) {
+	joinedPath := filepath.Join(galleryDir, filename)
+	cleanPath := filepath.Clean(joinedPath)
+
+	absGalleryDir, err := filepath.Abs(galleryDir)
+	if err != nil {
+		return "", err
+	}
+	absImagePath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", err
+	}
+
+	rel, err := filepath.Rel(absGalleryDir, absImagePath)
+	if err != nil {
+		return "", err
+	}
+	if rel == "." || strings.HasPrefix(rel, "..") {
+		return "", ErrNotFound
+	}
+
+	return absImagePath, nil
 }
 
 // supportedExtensions lists file extensions supported as gallery images.

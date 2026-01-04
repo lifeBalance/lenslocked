@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -249,7 +250,9 @@ func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 //
 // On success, it redirects back to `/galleries/{id}/edit`.
 func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "filename")
+	// filename := chi.URLParam(r, "filename")
+	filename := g.filename(w, r) // fix traversal attacks
+
 	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
 		return
@@ -273,7 +276,9 @@ func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
 //
 // - loading the image fails for other reasons (500)
 func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "filename")
+	// filename := chi.URLParam(r, "filename")
+	filename := g.filename(w, r) // fix traversal attacks
+
 	galleryId, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusNotFound)
@@ -348,4 +353,11 @@ func userMustOwnGallery(
 		return fmt.Errorf("user does not have access to this gallery")
 	}
 	return nil
+}
+
+func (g Galleries) filename(w http.ResponseWriter, r *http.Request) string {
+	_ = w
+	filename := chi.URLParam(r, "filename")
+	filename = filepath.Base(filename)
+	return filename
 }
