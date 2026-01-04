@@ -57,10 +57,18 @@ func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 func (svc *GalleryService) CreateImage(
 	galleryId int,
 	filename string,
-	fileContents io.Reader,
+	fileContents io.ReadSeeker,
 ) error {
+	err := checkContentType(fileContents, svc.supportedContentTypes())
+	if err != nil {
+		return fmt.Errorf("create image: %v - %w", filename, err)
+	}
+	err = checkExtension(filename, svc.supportedExtensions())
+	if err != nil {
+		return fmt.Errorf("create image: %v - %w", filename, err)
+	}
 	galleryDir := svc.galleryDir(galleryId)
-	err := os.MkdirAll(galleryDir, 0755)
+	err = os.MkdirAll(galleryDir, 0755)
 	if err != nil {
 		return fmt.Errorf("create image folder: %w", err)
 	}
@@ -280,6 +288,10 @@ func sanitizedGalleryPath(galleryDir, filename string) (string, error) {
 func (svc *GalleryService) supportedExtensions() []string {
 	// TODO: Set up list of supported extensions in .env or config.
 	return []string{".png", ".jpg", ".jpeg", ".gif"}
+}
+
+func (svc *GalleryService) supportedContentTypes() []string {
+	return []string{"image/png", "image/jpeg", "image/gif"}
 }
 
 // hasExtension reports whether filename has one of the provided extensions.
