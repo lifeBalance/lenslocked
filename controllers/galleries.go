@@ -24,7 +24,9 @@ type Galleries struct {
 
 type galleryOpt func(http.ResponseWriter, *http.Request, *models.Gallery) error
 
-// Render form to create a new gallery
+// New renders the form to create a new gallery.
+//
+// It uses the `title` query param (if present) to pre-fill the form.
 func (g Galleries) New(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		Title string
@@ -33,7 +35,13 @@ func (g Galleries) New(w http.ResponseWriter, r *http.Request) {
 	g.Templates.New.Execute(w, r, data) // render title in the template
 }
 
-// Process form submission to create a new gallery
+// Create processes the form submission to create a new gallery.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery creation fails (500)
+//
+// On success, it redirects to `/galleries/{id}/edit`.
 func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		UserID uint
@@ -52,7 +60,17 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editGalleryPath, http.StatusFound)
 }
 
-// Render form to edit a gallery
+// Edit renders the form to edit a gallery.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - the current user does not own the gallery (403)
+//
+// - loading images fails (500)
 func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
@@ -89,7 +107,19 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 	g.Templates.Edit.Execute(w, r, data) // render title in the template
 }
 
-// Process form submission to edit a gallery
+// Update processes the form submission to update a gallery.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - the current user does not own the gallery (403)
+//
+// - updating the gallery fails (500)
+//
+// On success, it redirects back to `/galleries/{id}/edit`.
 func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
@@ -106,6 +136,11 @@ func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
+// Index lists the current user's galleries.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - loading galleries fails (500)
 func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	type Gallery struct {
 		ID    int
@@ -131,6 +166,15 @@ func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 	g.Templates.Index.Execute(w, r, data)
 }
 
+// Show displays a gallery and its images.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - loading images fails (500)
 func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(w, r)
 	if err != nil {
@@ -167,6 +211,17 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	g.Templates.Show.Execute(w, r, data)
 }
 
+// Delete deletes a gallery by its `id` URL param.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - deleting the gallery fails (500)
+//
+// On success, it redirects to `/galleries`.
 func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(w, r)
 	if err != nil {
@@ -180,6 +235,19 @@ func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
+// DeleteImage deletes an image from a gallery.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - the current user does not own the gallery (403)
+//
+// - deleting the image fails (500)
+//
+// On success, it redirects back to `/galleries/{id}/edit`.
 func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
 	gallery, err := g.galleryById(w, r, userMustOwnGallery)
@@ -195,6 +263,15 @@ func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
+// Image serves a single image file from a gallery.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the image doesn't exist (404)
+//
+// - loading the image fails for other reasons (500)
 func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
 	galleryId, err := strconv.Atoi(chi.URLParam(r, "id"))
@@ -215,15 +292,17 @@ func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, image.Path)
 }
 
-// Loads and returns the gallery referenced by the route param `id`.
+// galleryById loads and returns the gallery referenced by the route param `id`.
 //
-// In case of error, it returns it, and handles the HTTP error response when:
+// In case of error, it returns it, and writes an HTTP error response when:
 //
 // - the `id` URL param is not an int (404)
 //
 // - the gallery doesn't exist (404)
 //
 // - the lookup fails for other reasons (500)
+//
+// It also runs any `galleryOpt` callbacks after loading the gallery.
 func (g Galleries) galleryById(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -253,6 +332,11 @@ func (g Galleries) galleryById(
 	return gallery, nil
 }
 
+// userMustOwnGallery is a `galleryOpt` that requires the current user to own the gallery.
+//
+// It writes an HTTP error response and returns a non-nil error when:
+//
+// - the current user does not own the gallery (403)
 func userMustOwnGallery(
 	w http.ResponseWriter,
 	r *http.Request,

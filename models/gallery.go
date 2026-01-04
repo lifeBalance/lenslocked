@@ -27,6 +27,15 @@ type GalleryService struct {
 	ImagesDir string
 }
 
+// Create creates a new gallery for a user.
+//
+// It writes to the database and returns the created gallery (including its ID).
+//
+// It returns a non-nil error when:
+//
+// - inserting the gallery fails
+//
+// - scanning the inserted ID fails
 func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 	gallery := Gallery{
 		Title:  title,
@@ -44,6 +53,13 @@ func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 	return &gallery, nil
 }
 
+// GalleryById queries a single gallery by its ID.
+//
+// It returns a non-nil error when:
+//
+// - the gallery does not exist (wraps `ErrNotFound`)
+//
+// - the database query fails for other reasons
 func (svc *GalleryService) GalleryById(id int) (*Gallery, error) {
 	gallery := Gallery{
 		ID: id,
@@ -63,6 +79,13 @@ func (svc *GalleryService) GalleryById(id int) (*Gallery, error) {
 	return &gallery, nil
 }
 
+// GalleriesByUserId queries all galleries owned by a user.
+//
+// It returns a non-nil error when:
+//
+// - the database query fails
+//
+// - scanning any row fails
 func (svc *GalleryService) GalleriesByUserId(userId uint) ([]Gallery, error) {
 	rows, err := svc.DB.Query(`
 		SELECT id, title
@@ -89,6 +112,13 @@ func (svc *GalleryService) GalleriesByUserId(userId uint) ([]Gallery, error) {
 	return galleries, nil
 }
 
+// UpdateGallery updates a gallery's mutable fields.
+//
+// It currently updates only the `title`.
+//
+// It returns a non-nil error when:
+//
+// - the database update fails
 func (svc *GalleryService) UpdateGallery(gallery *Gallery) error {
 	_, err := svc.DB.Exec(`
 		UPDATE galleries
@@ -101,6 +131,11 @@ func (svc *GalleryService) UpdateGallery(gallery *Gallery) error {
 	return nil
 }
 
+// DeleteGallery deletes a gallery by ID.
+//
+// It returns a non-nil error when:
+//
+// - the database delete fails
 func (svc *GalleryService) DeleteGallery(galleryId int) error {
 	_, err := svc.DB.Exec(`
 		DELETE FROM galleries
@@ -112,6 +147,13 @@ func (svc *GalleryService) DeleteGallery(galleryId int) error {
 	return nil
 }
 
+// Images lists image files stored for a gallery.
+//
+// It filters the files on disk using `supportedExtensions`.
+//
+// It returns a non-nil error when:
+//
+// - retrieving the list of files (glob) fails
 func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 	globPattern := filepath.Join(svc.galleryDir(galleryId), "*") // "images/gallery-2/*"
 	allFiles, err := filepath.Glob(globPattern)
@@ -132,6 +174,13 @@ func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 	return images, nil
 }
 
+// Image returns a single image from a gallery.
+//
+// It returns a non-nil error when:
+//
+// - the image file does not exist (returns `ErrNotFound`)
+//
+// - checking the file fails for other reasons
 func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) {
 	imgPath := filepath.Join(svc.galleryDir(galleryId), filename)
 	_, err := os.Stat(imgPath)
@@ -149,6 +198,13 @@ func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) 
 	}, nil
 }
 
+// DeleteImage deletes an image from a gallery.
+//
+// It returns a non-nil error when:
+//
+// - the image does not exist (wraps `ErrNotFound`)
+//
+// - removing the file fails
 func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
 	img, err := svc.Image(galleryId, filename)
 	if err != nil {
@@ -162,11 +218,13 @@ func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
 	return nil
 }
 
+// supportedExtensions lists file extensions supported as gallery images.
 func (svc *GalleryService) supportedExtensions() []string {
 	// TODO: Set up list of supported extensions in .env or config.
 	return []string{".png", ".jpg", ".jpeg", ".gif"}
 }
 
+// hasExtension reports whether filename has one of the provided extensions.
 func hasExtension(filename string, extensions []string) bool {
 	for _, ext := range extensions {
 		lowercasedFilename := strings.ToLower(filename)
@@ -178,6 +236,9 @@ func hasExtension(filename string, extensions []string) bool {
 	return false
 }
 
+// galleryDir returns the folder path used to store a gallery's images.
+//
+// If `ImagesDir` is not set, it defaults to `images`.
 func (svc *GalleryService) galleryDir(galleryId int) string {
 	imagesDir := svc.ImagesDir
 	if imagesDir == "" {
