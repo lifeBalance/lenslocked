@@ -61,6 +61,81 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editGalleryPath, http.StatusFound)
 }
 
+// Index lists the current user's galleries.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - loading galleries fails (500)
+func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
+	type Gallery struct {
+		ID    int
+		Title string
+	}
+	var data struct {
+		Galleries []Gallery
+	}
+
+	user := context.User(r.Context())
+	galleries, err := g.GalleryService.GalleriesByUserId(user.ID)
+	if err != nil {
+		fmt.Println("galleries controller: index: ", err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+	for _, g := range galleries {
+		data.Galleries = append(data.Galleries, Gallery{
+			ID:    g.ID,
+			Title: g.Title,
+		})
+	}
+	g.Templates.Index.Execute(w, r, data)
+}
+
+// Show displays a gallery and its images.
+//
+// It writes an HTTP error response and returns early when:
+//
+// - the gallery `id` URL param is invalid (404)
+//
+// - the gallery doesn't exist (404)
+//
+// - loading images fails (500)
+func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r)
+	if err != nil {
+		return
+	}
+
+	type Image struct {
+		GalleryID       int
+		Filename        string
+		FilenameEscaped string
+	}
+	// data for the template
+	data := struct {
+		ID     int
+		Title  string
+		Images []Image
+	}{
+		ID:    gallery.ID,
+		Title: gallery.Title,
+	}
+	images, err := g.GalleryService.Images(gallery.ID)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+	}
+	for _, img := range images {
+		data.Images = append(data.Images, Image{
+			GalleryID:       gallery.ID,
+			Filename:        img.Filename,
+			FilenameEscaped: url.PathEscape(img.Filename),
+		})
+	}
+
+	g.Templates.Show.Execute(w, r, data)
+}
+
 // Edit renders the form to edit a gallery.
 //
 // It writes an HTTP error response and returns early when:
@@ -137,79 +212,32 @@ func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
-// Index lists the current user's galleries.
-//
-// It writes an HTTP error response and returns early when:
-//
-// - loading galleries fails (500)
-func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
-	type Gallery struct {
-		ID    int
-		Title string
-	}
-	var data struct {
-		Galleries []Gallery
-	}
-
-	user := context.User(r.Context())
-	galleries, err := g.GalleryService.GalleriesByUserId(user.ID)
-	if err != nil {
-		fmt.Println("galleries controller: index: ", err)
-		http.Error(w, "something went wrong", http.StatusInternalServerError)
-		return
-	}
-	for _, g := range galleries {
-		data.Galleries = append(data.Galleries, Gallery{
-			ID:    g.ID,
-			Title: g.Title,
-		})
-	}
-	g.Templates.Index.Execute(w, r, data)
-}
-
-// Show displays a gallery and its images.
-//
-// It writes an HTTP error response and returns early when:
-//
-// - the gallery `id` URL param is invalid (404)
-//
-// - the gallery doesn't exist (404)
-//
-// - loading images fails (500)
-func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(w, r)
+func (g Galleries) UploadImage(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
 		return
 	}
-
-	type Image struct {
-		GalleryID       int
-		Filename        string
-		FilenameEscaped string
-	}
-	// data for the template
-	data := struct {
-		ID     int
-		Title  string
-		Images []Image
-	}{
-		ID:    gallery.ID,
-		Title: gallery.Title,
-	}
-	images, err := g.GalleryService.Images(gallery.ID)
+	err = r.ParseMultipartForm(5 << 20) // 5mb (shift x10 = 1kb)
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
 	}
-	for _, img := range images {
-		data.Images = append(data.Images, Image{
-			GalleryID:       gallery.ID,
-			Filename:        img.Filename,
-			FilenameEscaped: url.PathEscape(img.Filename),
-		})
+	fileHeaders := r.MultipartForm.File["images"]
+	for _, fh := range fileHeaders {
+		file, err := fh.Open()
+		if err != nil {
+			http.Error(w, "something went wrong", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+		err = g.GalleryService.CreateImage(gallery.ID, fh.Filename, file)
+		if err != nil {
+			http.Error(w, "something went wrong", http.StatusInternalServerError)
+			return
+		}
 	}
-
-	g.Templates.Show.Execute(w, r, data)
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
 // Delete deletes a gallery by its `id` URL param.

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,6 +52,29 @@ func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 		return nil, fmt.Errorf("create gallery: %w", err)
 	}
 	return &gallery, nil
+}
+
+func (svc *GalleryService) CreateImage(
+	galleryId int,
+	filename string,
+	fileContents io.Reader,
+) error {
+	galleryDir := svc.galleryDir(galleryId)
+	err := os.MkdirAll(galleryDir, 0755)
+	if err != nil {
+		return fmt.Errorf("create image folder: %w", err)
+	}
+	imagePath := filepath.Join(galleryDir, filename)
+	file, err := os.Create(imagePath)
+	if err != nil {
+		return fmt.Errorf("create image file: %w", err)
+	}
+	defer file.Close()
+	_, err = io.Copy(file, fileContents)
+	if err != nil {
+		return fmt.Errorf("copying image to file: %w", err)
+	}
+	return nil
 }
 
 // GalleryById queries a single gallery by its ID.

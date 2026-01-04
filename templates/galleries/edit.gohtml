@@ -31,6 +31,8 @@
     </div>
   </form>
 
+  <div class="py-4">{{template "upload_image_form" .}}</div>
+
   <div class="py-4">
     <h2 class="pb-4 text-sm font-semibold text-gray-800">Current Images</h2>
     <div class="py-2 grid grid-cols-8 gap-2">
@@ -39,7 +41,7 @@
         <div class="absolute top-2 right-2">
           {{template "delete_image_form" .}}
         </div>
-          
+
         <img
           class="w-full"
           src="/galleries/{{.GalleryID}}/images/{{.FilenameEscaped}}"
@@ -85,6 +87,37 @@
     class="p-1 px-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs cursor-pointer"
   >
     Delete
+  </button>
+</form>
+{{ end }}
+
+{{ define "upload_image_form" }}
+<form
+  action="/galleries/{{.ID}}/images"
+  method="post"
+  enctype="multipart/form-data"
+>
+  {{ csrfField }}
+  <div class="py-2">
+    <label for="images" class="block mb-2 text-sm font-semibold text-gray-800"
+      >Add Images
+      <p class="py-2 text-xs text-gray-600">Only jpg, png and gif files.</p>
+      <input
+        type="file"
+        multiple
+        accept="image/png, image/jpeg, image/gif"
+        name="images"
+        id="images"
+        class="file:mr-4 file:rounded-md file:border file:border-gray-600 file:px-4 file:py-2 file:text-gray-800 file:text-sm file:font-semibold hover:file:border-gray-900 file:cursor-pointer"
+      />
+    </label>
+  </div>
+
+  <button
+    type="submit"
+    class="py-2 px-3 bg-blue-600 hover:bg-indigo-700 text-white rounded font-bold cursor-pointer"
+  >
+    Upload
   </button>
 </form>
 {{ end }}
