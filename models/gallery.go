@@ -176,6 +176,31 @@ func (svc *GalleryService) DeleteGallery(galleryId int) error {
 	if err != nil {
 		return fmt.Errorf("delete gallery: %w", err)
 	}
+	dir := svc.galleryDir(galleryId)
+	err = os.RemoveAll(dir)
+	if err != nil {
+		return fmt.Errorf("delete gallery images: %w", err)
+	}
+	return nil
+}
+
+// DeleteImage deletes an image from a gallery.
+//
+// It returns a non-nil error when:
+//
+// - the image does not exist (wraps `ErrNotFound`)
+//
+// - removing the file fails
+func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
+	img, err := svc.Image(galleryId, filename)
+	if err != nil {
+		return fmt.Errorf("delete image: %w", err)
+	}
+
+	err = os.Remove(img.Path)
+	if err != nil {
+		return fmt.Errorf("delete image: %w", err)
+	}
 	return nil
 }
 
@@ -237,26 +262,6 @@ func (svc *GalleryService) Image(galleryId int, filename string) (Image, error) 
 		GalleryID: galleryId,
 		Path:      sanitizedPath,
 	}, nil
-}
-
-// DeleteImage deletes an image from a gallery.
-//
-// It returns a non-nil error when:
-//
-// - the image does not exist (wraps `ErrNotFound`)
-//
-// - removing the file fails
-func (svc *GalleryService) DeleteImage(galleryId int, filename string) error {
-	img, err := svc.Image(galleryId, filename)
-	if err != nil {
-		return fmt.Errorf("delete image: %w", err)
-	}
-
-	err = os.Remove(img.Path)
-	if err != nil {
-		return fmt.Errorf("delete image: %w", err)
-	}
-	return nil
 }
 
 // sanitizedGalleryPath ensures filename resolves within galleryDir.
