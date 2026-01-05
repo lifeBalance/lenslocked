@@ -18,19 +18,14 @@ type PostgresConfig struct {
 	SSLMode  string
 }
 
-func DefaultPostgresConfig() PostgresConfig {
-	return PostgresConfig{
-		Host:     "localhost",
-		Port:     "5433",
-		User:     "bob",
-		Database: "lenslocked",
-		Password: "1234",
-		SSLMode:  "disable",
-	}
-}
-
 func Open(cfg PostgresConfig) (*sql.DB, error) {
-	stringifiedConfig := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode)
+	stringifiedConfig := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host,
+		cfg.Port,
+		cfg.User,
+		cfg.Password,
+		cfg.Database,
+		cfg.SSLMode)
 
 	conn, err := sql.Open("pgx", stringifiedConfig)
 	if err != nil {

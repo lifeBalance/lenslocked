@@ -220,19 +220,19 @@ func main() {
 // }
 
 func loadSMTPConfig() (models.SMTPConfig, error) {
-	portString := os.Getenv("MAILTRAP_PORT")
+	portString := os.Getenv("SMTP_PORT")
 	portInt, err := strconv.Atoi(portString)
 	if err != nil {
 		portInt = 2525
 	}
 	cfg := models.SMTPConfig{
-		Host: os.Getenv("MAILTRAP_HOST"),
-		User: os.Getenv("MAILTRAP_USERNAME"),
-		Pass: os.Getenv("MAILTRAP_PASSWORD"),
+		Host: os.Getenv("SMTP_HOST"),
+		User: os.Getenv("SMTP_USERNAME"),
+		Pass: os.Getenv("SMTP_PASSWORD"),
 		Port: portInt,
 	}
 	if cfg.Host == "" || cfg.User == "" || cfg.Pass == "" {
-		return cfg, fmt.Errorf("missing MAILTRAP_* envs")
+		return cfg, fmt.Errorf("missing SMTP_* envs")
 	}
 	return cfg, nil
 }
@@ -248,7 +248,17 @@ func loadEnvConfig() (config, error) {
 	}
 
 	// PSQL
-	cfg.PSQL = models.DefaultPostgresConfig() // TODO: Load from env
+	cfg.PSQL = models.PostgresConfig{
+		Host:     os.Getenv("PSQL_HOST"),
+		Port:     os.Getenv("PSQL_PORT"),
+		User:     os.Getenv("PSQL_USER"),
+		Database: os.Getenv("PSQL_DATABASE"),
+		Password: os.Getenv("PSQL_PASSWORD"),
+		SSLMode:  os.Getenv("PSQL_SSLMODE"),
+	}
+	if cfg.PSQL.Host == "" || cfg.PSQL.Port == "" || cfg.PSQL.User == "" || cfg.PSQL.Database == "" || cfg.PSQL.Password == "" || cfg.PSQL.SSLMode == "" {
+		panic("No PSQL config provided")
+	}
 
 	// SMTP
 	smtpConfig, err := loadSMTPConfig()
@@ -271,7 +281,7 @@ func loadEnvConfig() (config, error) {
 	cfg.CSRF.Key = []byte(csrfKeyString)
 
 	// Server
-	cfg.Server.Address = ":3000" //  TODO: Load from env
+	cfg.Server.Address = os.Getenv("SERVER_ADDRESS")
 
 	return cfg, nil
 }
