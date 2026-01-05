@@ -35,17 +35,24 @@ func main() {
 		panic(err)
 	}
 
+	err = run(cfg)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func run(cfg config) error {
 	// Set up DB
 	conn, err := models.Open(cfg.PSQL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer conn.Close()
 
 	// Migrations
 	err = models.MigrateFS(conn, migrations.FS, ".")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// User services
@@ -208,10 +215,7 @@ func main() {
 
 	// Start the server
 	fmt.Printf("Starting the server on %s\n", cfg.Server.Address)
-	err = http.ListenAndServe(cfg.Server.Address, r)
-	if err != nil {
-		panic(err)
-	}
+	return http.ListenAndServe(cfg.Server.Address, r)
 }
 
 // Wrap any HandlerFunc with this mw to time it.

@@ -75,7 +75,7 @@ Add `public/assets/tailwind.css` to `.gitignore` (or only commit the built file 
 
 ## Running Tailwind from Docker (Optional)
 
-Instead of installing Tailwind with `npm`, we could run it from within a Docker container. We'd have to create a `tailwind/Dockerfile`:
+Instead of installing Tailwind **locally** (which requires `node`), we could run it from within a Docker container. We'd have to create a `tailwind/Dockerfile`:
 
 ```dockerfile
 FROM node:22
@@ -117,9 +117,6 @@ That container will watch and compile Tailwind into `assets/styles.css`.
 
 We can add the commands above in our `docker-compose.override.yml`, so we can comfortably run:
 
-```sh
-docker compose up --build tailwind
-```
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.override.yml up
 ```
