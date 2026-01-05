@@ -7,7 +7,7 @@ services:
     volumes:
       # - <our-computer>:<container>
       - ./images:/app/images
-      - ./.env.prod:/app/.env:ro
+      # - ./.env.prod:/app/.env:ro
     # Testing (remove before deploying)
     ports:
       - 3000:3000
