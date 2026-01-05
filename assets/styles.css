@@ -203,9 +203,6 @@
   .relative {
     position: relative;
   }
-  .static {
-    position: static;
-  }
   .top-2 {
     top: calc(var(--spacing) * 2);
   }
@@ -235,9 +232,6 @@
   }
   .inline {
     display: inline;
-  }
-  .table {
-    display: table;
   }
   .size-6 {
     width: calc(var(--spacing) * 6);
@@ -620,6 +614,11 @@
         }
       }
     }
+  }
+}
+@layer components {
+  .tw-debug {
+    background-color: pink;
   }
 }
 @property --tw-space-y-reverse {

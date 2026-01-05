@@ -1,16 +1,34 @@
 services:
   db:
     # Override with:
-    # docker-compose 
-    # -f docker-compose.yml
-    # -f docker-compose.<override>.yml 
-    # <up/down/etc> <flags>
+    # docker compose \
+    #   -f docker-compose.yml \
+    #   -f docker-compose.override.yml \
+    #   up
     ports:
       - 5433:5432 # <our_machine>:<container>
     volumes:
-      -  pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql
       - ./db-init:/docker-entrypoint-initdb.d:ro
-  
+
+  tailwind:
+    build:
+      context: .
+      dockerfile: tailwind/Dockerfile
+    working_dir: /tailwind
+    tty: true
+    stdin_open: true
+    volumes:
+      # - <our-computer>:<container>
+      - ./package.json:/tailwind/package.json:ro
+      - ./package-lock.json:/tailwind/package-lock.json:ro
+      - ./tailwind:/tailwind/tailwind:ro
+      - ./templates:/tailwind/templates:ro
+      - ./assets:/tailwind/assets
+      # anonymous volume so linux-native deps install here
+      - /tailwind/node_modules
+    command: sh -lc "npm ci && npm run watch:css"
+
   adminer:
     image: adminer
     restart: always

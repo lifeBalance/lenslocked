@@ -72,3 +72,68 @@ Ensure `/assets` is reachable — either via your existing **static handler** or
 Add `public/assets/tailwind.css` to `.gitignore` (or only commit the built file if you’d rather avoid a build step in production).
 
 > That’s it — no config file needed, and you get full control over **Tailwind v4** locally. 
+
+## Running Tailwind from Docker (Optional)
+
+Instead of installing Tailwind with `npm`, we could run it from within a Docker container. We'd have to create a `tailwind/Dockerfile`:
+
+```dockerfile
+FROM node:22
+
+WORKDIR /tailwind
+
+CMD ["sh","-lc","npm ci && npm run watch:css"]
+```
+
+[npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci) means **clean install**:
+
+- It installs dependencies strictly from `package-lock.json`.
+- It deletes `node_modules` first and then installs exactly what the lockfile says.
+- It’s the preferred install command for CI/containers because it’s reproducible.
+
+The idea is to use the repo's `package.json` and `package-lock.json` files from the mounted volume. Then, install deps into the container volume, then run your existing script.
+
+### Testing Setup
+
+To **test** this, we could run:
+
+1. Build the **image**:
+```sh
+docker build -t lenslocked-tailwind -f tailwind/Dockerfile .
+```
+
+2. Spin up a **container** with the **source** and the **destination** folders, mounted as volumes:
+```sh
+docker run --rm -it \
+  -v "$PWD":/tailwind \
+  -v /tailwind/node_modules \
+  -w /tailwind \
+  lenslocked-tailwind
+```
+
+That container will watch and compile Tailwind into `assets/styles.css`.
+
+### Docker Compose
+
+We can add the commands above in our `docker-compose.override.yml`, so we can comfortably run:
+
+```sh
+docker compose up --build tailwind
+```
+```sh
+docker compose -f docker-compose.yml -f docker-compose.override.yml up
+```
+
+To bring the setup down:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.override.yml down -v
+```
+
+Remember that the `-v` option removes the volumes, so the typical workflow after `down -v`:
+
+1) `docker compose up ...` (wait for Postgres ready)
+2) Start your server (`air` or `go run ./cmd/server`), to run the migrations.
+
+Check `docker-compose.override.yml` for details.
+
