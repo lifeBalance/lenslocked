@@ -1,0 +1,26 @@
+{
+  "name": "lenslocked",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./tailwind/styles.css -o ./assets/styles.css --minify",
+    "watch:css": "tailwindcss -i ./tailwind/styles.css -o ./assets/styles.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lifeBalance/lenslocked.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lifeBalance/lenslocked/issues"
+  },
+  "homepage": "https://github.com/lifeBalance/lenslocked#readme",
+  "description": "",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "tailwindcss": "^4.1.18"
+  }
+}

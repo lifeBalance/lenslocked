@@ -5,3 +5,4 @@ opencode.jsonc.bak
 tmp/
 .env
 images/
+node_modules
