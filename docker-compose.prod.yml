@@ -1,0 +1,15 @@
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      # - <our-computer>:<container>
+      - ./images:/app/images
+      - ./.env.prod:/app/.env:ro
+    # Testing (remove before deploying)
+    ports:
+      - 3000:3000
+    depends_on:
+      - db
