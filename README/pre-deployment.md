@@ -1,4 +1,4 @@
-# Deploying
+# Pre-Deployment
 
 The goal is to have our app running from a **Docker container**. We'll need:
 
@@ -81,3 +81,41 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
 ```
 
 You can run the same command from the previous section to start **up** the app.
+
+### Adding Tailwind to the Multi-Stage Build
+
+Finally, let's add an optimized version of our `styles.css` to the **production image**:
+
+```dockerfile
+FROM node:22 AS tailwind-builder
+WORKDIR /app
+COPY ./package.json ./package-lock.json ./
+RUN ["sh","-lc","npm ci"]
+
+COPY ./templates ./templates
+COPY ./tailwind/styles.css ./tailwind/styles.css
+RUN ["npm", "run", "build:css"]
+
+FROM golang AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY ./ ./
+RUN go build -v -o ./server ./cmd/server/
+
+FROM ubuntu
+WORKDIR /app
+COPY ./assets ./assets
+COPY .env.prod .env
+COPY --from=builder /app/server ./server
+COPY --from=tailwind-builder /app/assets/styles.css ./assets/styles.css
+CMD ./server
+```
+
+In the **first stage** we're:
+
+- Copying over our dependencies, and installing them.
+- Building a **minified** version of our styles.
+
+> [!NOTE]
+> Note how in the **last stage**, we're copying over the minified styles to the proper folder. You can verify this, if you check in your browser `http://localhost:3000/assets/styles.css`.
