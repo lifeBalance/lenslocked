@@ -199,10 +199,11 @@ func main() {
 If you run this code:
 
 ```sh
-go run cmd/exp/main.go 
+go run cmd/exp/main.go
 ```
 
 We should get the output:
+
 ```
 Visit the URL for the auth dialog: https://www.dropbox.com/oauth2/authorize?access_type=offline&client_id=ypmx1qg2&response_type=code&scope=files.metadata.read+files.content.read&state=state
 Once you have the code, paste it and press enter:
@@ -220,8 +221,58 @@ If she authorizes our app, we'll get the code:
 
 ![code](./img/code.png)
 
-Copy and paste in the terminal to finish the experiment! This is the final output:
+Copy and paste in the terminal to finish the experiment! This is the final output (prettified and redacted):
 
+```json
+{
+  "entries": [
+    {
+      ".tag": "file",
+      "name": "gopher.jpg",
+      "path_lower": "/gopher.jpg",
+      "path_display": "/gopher.jpg",
+      "id": "id:QvDW163Du64AAAAAABg",
+      "client_modified": "2026-01-06T14:53:41Z",
+      "server_modified": "2026-01-06T14:53:41Z",
+      "rev": "01647b9576f960c000000032621fc63",
+      "size": 44732,
+      "is_downloadable": true,
+      "content_hash": "0737c7175e1f154c7a82f8320788273baa"
+    }
+  ],
+  "cursor": "AmlmcFehbrWL466u7UywwbQ8Ky9QvhzKDeCospPr0",
+  "has_more": false
+}
 ```
-{"entries": [{".tag": "file", "name": "gopher.jpg", "path_lower": "/gopher.jpg", "path_display": "/gopher.jpg", "id": "id:QvDW163Du64AAAAAABg", "client_modified": "2026-01-06T14:53:41Z", "server_modified": "2026-01-06T14:53:41Z", "rev": "01647b9576f960c000000032621fc63", "size": 44732, "is_downloadable": true, "content_hash": "0737c7175e1f154c7a82f8320788273baa"}], "cursor": "AmlmcFehbrWL466u7UywwbQ8Ky9QvhzKDeCospPr0", "has_more": false}
+
+## About the OAuth Token
+
+In the previous code, we were using the the [Exchange](https://pkg.go.dev/golang.org/x/oauth2#Config.Exchange) function, to exchange the **authorization code** into a [token](https://pkg.go.dev/golang.org/x/oauth2#Token). this token represents the credentials used to authorize the requests to access protected resources on the OAuth 2.0 provider's backend. We could add a few lines of code to print the token once we get it:
+
+```json
+{
+  "access_token": "sl.u.AG--REDACTED--Huz",
+  "token_type": "bearer",
+  "expiry": "2026-01-06T23:36:46.611737+02:00",
+  "expires_in": 14400
+}
 ```
+
+The token contains 4 fields:
+
+- The `access_token` is the token that authorizes and authenticates the requests.
+- The `token_type` in this case is `bearer` which means thatr whoever bears (possesses) this token is treated as authorized
+- The `expiry` is the optional expiration time of the access token.
+- The `expires_in` which specifies how many seconds later (from now) the token expires.
+
+You may have noticed that there's an **access token** but there's no **refresh token**. That shouldn't be the case, since we're using `oauth2.AccessTypeOffline` as our [AuthCodeOption](https://pkg.go.dev/golang.org/x/oauth2#AuthCodeOption)
+
+> [!NOTE]
+> In OAuth, **Online Access** means the app needs the user present (or recently active) for fresh access tokens, suitable for interactive tasks, while **Offline Access** grants a `refresh token` to get new access tokens later, enabling background work.
+
+Using `oauth2.AccessTypeOffline` should grant a `refresh token` in the OAuth token, that we could use to get new `access tokens` later, enabling **background work** such as watching Dropbox image folders, and update our app images when new pics are added in Dropbox.
+
+> [!TIP]
+> Since the option above is not working, we could set the `token_access_type` query param manually; check the [docs](https://www.dropbox.com/developers/documentation/http/documentation) for details.
+
+The output of our OAuth experiment should include now the `refresh_token`!

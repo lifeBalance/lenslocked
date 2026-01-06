@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -35,7 +36,8 @@ func main() {
 	}
 
 	// Redirect user to the consent page in the provider.
-	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	// url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	url := conf.AuthCodeURL("state", oauth2.SetAuthURLParam("token_access_type", "offline"))
 	fmt.Printf("Visit the URL for the auth dialog: %v\n", url)
 	fmt.Printf("Once you have the code, paste it and press enter:\n")
 
@@ -53,6 +55,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(tok)
+	// fmt.Printf("Token: %v\n", tok)
 
 	client := conf.Client(ctx, tok)
 	apiUrl := "https://api.dropboxapi.com/2/files/list_folder"
