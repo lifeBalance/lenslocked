@@ -119,3 +119,67 @@ In the **first stage** we're:
 
 > [!NOTE]
 > Note how in the **last stage**, we're copying over the minified styles to the proper folder. You can verify this, if you check in your browser `http://localhost:3000/assets/styles.css`.
+
+## Caddy
+
+[Caddy](https://caddyserver.com/) is a web server + reverse proxy, that we'll use in front of your Go app. Our long term goal using it, it's so that we can:
+
+- Run server on an **internal port** (`:3000`), and use caddy to expose it on public ports `:80` and `:443`.
+- Let Caddy manage TLS certificates.
+
+Let's start by creating a very simple [caddyfile](https://caddyserver.com/docs/caddyfile) at the root of our project:
+
+```Caddyfile
+:80
+
+reverse_proxy server:3000
+```
+
+At this point we're using Caddy as a **reverse proxy**, meaning it will receive requests on port `80` and redirect them to port `3000`, which it's the port that the Docker container running our app exposes.
+
+We'll be using  inside a Docker container, so we'll need to edit our `docker-compose.prod.yml` file:
+```yml
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      # - <our-computer>:<container>
+      - ./images:/app/images
+    depends_on:
+      - db
+    # Testing (remove before deploying)
+    # ports:
+    #   - 3000:3000
+    
+  caddy:
+    image: caddy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+```
+
+> [!NOTE]
+> Note how we're also removing `ports` from our `server`, since Caddy now will receive requests on `80/443` and route to the `3000` in our `server` (both services run in the Docker network).
+
+To test this out, we'll bring **down** our running containers:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+```
+
+And **up** again:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+```
+
+Now, you won't be able to access your app in `localhost:3000`, but if you point your browser to `localhost:80` or simply `localhost` voila!
+
+> [!CAUTION]
+> If you try to **signup** or submit any form, we'll probably get a CSRF error. The solution is simple: add `localhost` (next to `localhost:3000`) in the list of `TrustedOrigins` (in the `cmd/server/server.go` file).

@@ -84,6 +84,7 @@ func run(cfg config) error {
 		csrf.Path("/"),
 		csrf.Secure(cfg.CSRF.Secure),
 		csrf.TrustedOrigins([]string{
+			"localhost",
 			"localhost:3000",
 		}),
 		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

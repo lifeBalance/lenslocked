@@ -7,9 +7,17 @@ services:
     volumes:
       # - <our-computer>:<container>
       - ./images:/app/images
-      # - ./.env.prod:/app/.env:ro
-    # Testing (remove before deploying)
-    ports:
-      - 3000:3000
     depends_on:
       - db
+    # Testing (remove before deploying)
+    # ports:
+    #   - 3000:3000
+    
+  caddy:
+    image: caddy
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
