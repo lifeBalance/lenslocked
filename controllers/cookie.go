@@ -24,10 +24,10 @@ func setCookie(w http.ResponseWriter, name, value string) {
 	http.SetCookie(w, cookie)
 }
 
-func readCookie(r *http.Request, name string) (string, error) {
-	cookie, err := r.Cookie(CookieName)
+func readCookie(r *http.Request, cookieName string) (string, error) {
+	cookie, err := r.Cookie(cookieName)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", name, err)
+		return "", fmt.Errorf("%s: %w", cookieName, err)
 	}
 	return cookie.Value, nil
 }

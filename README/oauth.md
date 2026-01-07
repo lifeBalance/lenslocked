@@ -8,7 +8,7 @@ Let's imagine our app implements OAuth, and offers users to be able to authentic
 
 1. User clicks on an **OAuth Dropbox** button in our app.
 2. User is redirected to Dropbox, where they **authorize** our app to access limited information in their Dropbox account.
-3. Once they authorize our app, they're redirected back to our website, with the authorization code from Dropbox.
+3. Once they authorize our app, they're redirected back to our website, with the **authorization code** from Dropbox.
 4. Our **app** reads this code (from the URL query params), and requests an **API token** from the **Dropbox API**.
 5. Once the Dropbox API responds with this token, our app can use it to access the user's Dropbox account (until access is revoked).
 
@@ -276,3 +276,12 @@ Using `oauth2.AccessTypeOffline` should grant a `refresh token` in the OAuth tok
 > Since the option above is not working, we could set the `token_access_type` query param manually; check the [docs](https://www.dropbox.com/developers/documentation/http/documentation) for details.
 
 The output of our OAuth experiment should include now the `refresh_token`!
+
+## About the AuthCodeURL
+
+When we call , we're hardcoding the string `state` as the first argument. Actually this is a value intended to maintain state between the request and callback. In other words in our backend we could use here some generated token, that will be sent to the provider as well; if authorization succeeds, the provider will sent back the same token, so we can verify that we generated that URL.
+
+> [!TIP]
+> We could use here the CSRF token that we're using in our forms. This is not mandatory, we could use any random generated string here, as long as we verify it after (when the provider sends back the **authorization code** from the provider).
+
+Since the main idea here is to have a way of verifying that WE initialized the OAuth process with the authorization URL, we can set the **state** in a cookie, that we later will parse, and compare with our CSRF token (or any other string).

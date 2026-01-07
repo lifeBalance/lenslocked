@@ -15,6 +15,7 @@ import (
 	"github.com/lifebalance/lenslocked/models"
 	"github.com/lifebalance/lenslocked/templates"
 	"github.com/lifebalance/lenslocked/views"
+	"golang.org/x/oauth2"
 )
 
 type config struct {
@@ -27,6 +28,7 @@ type config struct {
 	Server struct {
 		Address string
 	}
+	OAuthProviders map[string]*oauth2.Config
 }
 
 func main() {
@@ -84,6 +86,8 @@ func run(cfg config) error {
 		csrf.Path("/"),
 		csrf.Secure(cfg.CSRF.Secure),
 		csrf.TrustedOrigins([]string{
+			"127.0.0.1",
+			"127.0.0.1:3000",
 			"localhost",
 			"localhost:3000",
 		}),
@@ -163,6 +167,10 @@ func run(cfg config) error {
 			"tailwind.gohtml",
 		),
 	)
+	// OAuth Controller
+	oauthController := controllers.OAuth{
+		ProviderConfigs: cfg.OAuthProviders,
+	}
 
 	// Set up router and routes
 	r := chi.NewRouter()
@@ -205,6 +213,11 @@ func run(cfg config) error {
 			r.Post("/{id}/images/{filename}/delete", galleriesController.DeleteImage)
 			r.Post("/{id}/images", galleriesController.UploadImage)
 		})
+	})
+	r.Route("/oauth/{provider}", func(r chi.Router) {
+		r.Use(umw.RequireUser)
+		r.Get("/connect", oauthController.Connect)
+		r.Get("/callback", oauthController.Callback)
 	})
 
 	assetsHandler := http.FileServer(http.Dir("assets"))
@@ -288,6 +301,23 @@ func loadEnvConfig() (config, error) {
 		log.Fatalf("woops %v", err)
 	}
 	cfg.CSRF.Key = []byte(csrfKeyString)
+
+	// OAUTH
+	// Dropbox provider
+	cfg.OAuthProviders = make(map[string]*oauth2.Config)
+	dropboxConfig := &oauth2.Config{
+		ClientID:     os.Getenv("DROPBOX_APP_KEY"),
+		ClientSecret: os.Getenv("DROPBOX_APP_SECRET"),
+		Scopes: []string{
+			"files.metadata.read",
+			"files.content.read",
+		},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://www.dropbox.com/oauth2/authorize",
+			TokenURL: "https://api.dropboxapi.com/oauth2/token",
+		},
+	}
+	cfg.OAuthProviders["dropbox"] = dropboxConfig
 
 	// Server
 	cfg.Server.Address = os.Getenv("SERVER_ADDRESS")
