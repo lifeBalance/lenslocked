@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -67,12 +70,49 @@ func (oa OAuth) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "something went wrong", http.StatusBadRequest)
 		return
 	}
-	// Persist the oauth token, to be used in further requests.
-	// Redirect the user to the page where oauth started.
+	// Persist the oauth token to DB, to be used in further requests.
+	// No need for the above, since we'll be using the dropbox chooser.
+
+	// Redirect the user to the page where oauth started (for now show token).
+	// w.Header().Set("Content-Type", "application/json")
+	// enc := json.NewEncoder(w)
+	// enc.SetIndent("", "  ")
+	// enc.Encode(token)
+
+	// Let's test the Dropbox api
+	client := config.Client(r.Context(), token)
+	dropboxApiUrl := "https://api.dropboxapi.com/2/files/list_folder"
+	resp, err := client.Post(dropboxApiUrl, "application/json", strings.NewReader(`{
+		"path": ""
+	}`))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	err = writePrettyJSONResponse(w, resp.Body)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "failed to read dropbox response", http.StatusInternalServerError)
+		return
+	}
+}
+
+// Just a helper to pretty-print a JSON response
+func writePrettyJSONResponse(w http.ResponseWriter, r io.Reader) error {
+	raw, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, raw, "", "  "); err != nil {
+		return err
+	}
 	w.Header().Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	enc.Encode(token)
+	_, err = w.Write(pretty.Bytes())
+	return err
 }
 
 func redirectURI(r *http.Request, provider string) string {
