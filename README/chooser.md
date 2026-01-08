@@ -208,7 +208,7 @@ func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 
 ## Refactor Slow Code
 
-Right now, in our `models/errors.go` file, we are using a helper function named `checkContentType` that reads 512 bytes from the beginning of a file, then uses the [Seek](https://pkg.go.dev/io#Seeker.Seek) to set the offset back to the beginning of the stream. 
+Right now, in our `models/errors.go` file, we are using a helper function named `checkContentType` that reads 512 bytes from the beginning of a file, then uses the [Seek](https://pkg.go.dev/io#Seeker.Seek) to set the offset back to the beginning of the stream.
 
 > [!WARNING]
 > This happens once per file, so large multi-file uploads pay that cost repeatedly.
@@ -217,3 +217,38 @@ We refactored the helper so it returns the **sniffed bytes** and in the **contro
 
 > [!WARNING]
 > After this change, we gotta refactor `CreateImage`.
+
+## Concurrent Uploads
+
+Right now our `UploadImageViaURL` handler may have to deal with requests to create **several images**. At this point, the code in this handler may be improved so that we can create images **concurrently** instead of one after another.
+
+```go
+func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
+	if err != nil {
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	files := r.PostForm["files"]
+	var wg sync.WaitGroup
+	wg.Add(len(files))
+	for _, f := range files {
+		go func(imageUrl string) {
+			err = g.GalleryService.CreateImageViaURL(gallery.ID, imageUrl)
+			if err != nil {
+				http.Error(w, "something went wrong creating image: "+f, http.StatusInternalServerError)
+			}
+			wg.Done()
+		}(f) // 👈 Pass f here! ⚠️
+	}
+	wg.Wait()
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
+}
+```
+
+To achieve this we've used a [WaitGroup](https://pkg.go.dev/sync#WaitGroup) typically used to wait for a group of tasks (goroutines) to finish. All of these tasks will be running concurrently.

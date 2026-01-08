@@ -236,6 +236,10 @@ func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 	return images, nil
 }
 
+// CreateImageViaURL downloads an image from the provided URL and stores it in the gallery.
+//
+// It performs an HTTP GET, validates the response payload, buffers the body, and then reuses
+// CreateImage to persist the image alongside regular uploads.
 func (svc *GalleryService) CreateImageViaURL(galleryId int, url string) error {
 	filename := path.Base(url)
 	resp, err := http.Get(url)
