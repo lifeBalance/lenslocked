@@ -60,9 +60,9 @@ func (svc *GalleryService) Create(title string, userId uint) (*Gallery, error) {
 func (svc *GalleryService) CreateImage(
 	galleryId int,
 	filename string,
-	fileContents io.ReadSeeker,
+	fileContents io.Reader,
 ) error {
-	err := checkContentType(fileContents, svc.supportedContentTypes())
+	sniffedBytes, err := checkContentType(fileContents, svc.supportedContentTypes())
 	if err != nil {
 		return fmt.Errorf("create image: %v - %w", filename, err)
 	}
@@ -81,7 +81,9 @@ func (svc *GalleryService) CreateImage(
 		return fmt.Errorf("create image file: %w", err)
 	}
 	defer file.Close()
-	_, err = io.Copy(file, fileContents)
+	// Merge readers (sniffed bytes, and offsetted file)
+	completeFile := io.MultiReader(bytes.NewReader(sniffedBytes), fileContents)
+	_, err = io.Copy(file, completeFile)
 	if err != nil {
 		return fmt.Errorf("copying image to file: %w", err)
 	}
@@ -244,12 +246,7 @@ func (svc *GalleryService) CreateImageViaURL(galleryId int, url string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("downloading image - invalid status code %d", resp.StatusCode)
 	}
-	imageBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("reading image bytes: %w", err)
-	}
-	readSeeker := bytes.NewReader(imageBytes)
-	return svc.CreateImage(galleryId, filename, readSeeker)
+	return svc.CreateImage(galleryId, filename, resp.Body)
 }
 
 // Image returns a single image from a gallery.

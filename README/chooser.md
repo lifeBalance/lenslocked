@@ -205,3 +205,15 @@ func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 ```
+
+## Refactor Slow Code
+
+Right now, in our `models/errors.go` file, we are using a helper function named `checkContentType` that reads 512 bytes from the beginning of a file, then uses the [Seek](https://pkg.go.dev/io#Seeker.Seek) to set the offset back to the beginning of the stream. 
+
+> [!WARNING]
+> This happens once per file, so large multi-file uploads pay that cost repeatedly.
+
+We refactored the helper so it returns the **sniffed bytes** and in the **controller**, the functions that use this helper now rebuild the stream via `io.MultiReader`.
+
+> [!WARNING]
+> After this change, we gotta refactor `CreateImage`.
