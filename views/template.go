@@ -24,7 +24,7 @@ type Template struct {
 	htmlTpl *template.Template
 }
 
-func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
+func ParseFS(fs fs.FS, pageTpl string, otherTplFiles ...string) (Template, error) {
 	// Debugging templates in nested folders (galleries/new.gohtml)
 	// fmt.Println("1", patterns)    // 1 [galleries/new.gohtml tailwind.gohtml]
 	// fmt.Println("2", patterns[0]) // 2 galleries/new.gohtml
@@ -32,7 +32,7 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 	// 'Base' extracts the filename, w/o the parent folder.
 	// fmt.Println("3", path.Base(patterns[0])) // 3 new.gohtml
 
-	tpl := template.New(path.Base(patterns[0]))
+	tpl := template.New(path.Base(pageTpl))
 	tpl = tpl.Funcs(
 		template.FuncMap{
 			"csrfField": func() (template.HTML, error) {
@@ -46,7 +46,8 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 			},
 		},
 	)
-	tpl, err := tpl.ParseFS(fs, patterns...)
+	otherTplFiles = append(otherTplFiles, pageTpl)
+	tpl, err := tpl.ParseFS(fs, otherTplFiles...)
 	if err != nil {
 		log.Printf("parsing FS template: %v", err)
 		return Template{}, fmt.Errorf("parsing FS template: %w", err)

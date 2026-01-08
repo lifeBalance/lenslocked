@@ -121,19 +121,19 @@ func run(cfg config) error {
 		EmailService:         emailService,
 	}
 	usersController.Templates.New = views.MustParse(
-		views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"),
+		views.ParseFS(templates.FS, "signup.gohtml", "layout.gohtml"),
 	)
 	usersController.Templates.SignIn = views.MustParse(
-		views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"),
+		views.ParseFS(templates.FS, "signin.gohtml", "layout.gohtml"),
 	)
 	usersController.Templates.ForgotPassword = views.MustParse(
-		views.ParseFS(templates.FS, "forgot-pwd.gohtml", "tailwind.gohtml"),
+		views.ParseFS(templates.FS, "forgot-pwd.gohtml", "layout.gohtml"),
 	)
 	usersController.Templates.CheckYourEmail = views.MustParse(
-		views.ParseFS(templates.FS, "check-your-email.gohtml", "tailwind.gohtml"),
+		views.ParseFS(templates.FS, "check-your-email.gohtml", "layout.gohtml"),
 	)
 	usersController.Templates.ResetPassword = views.MustParse(
-		views.ParseFS(templates.FS, "reset-pwd.gohtml", "tailwind.gohtml"),
+		views.ParseFS(templates.FS, "reset-pwd.gohtml", "layout.gohtml"),
 	)
 	// Galleries controllers
 	galleriesController := controllers.Galleries{
@@ -143,28 +143,28 @@ func run(cfg config) error {
 		views.ParseFS(
 			templates.FS,
 			"galleries/new.gohtml",
-			"tailwind.gohtml",
+			"layout.gohtml",
 		),
 	)
 	galleriesController.Templates.Edit = views.MustParse(
 		views.ParseFS(
 			templates.FS,
 			"galleries/edit.gohtml",
-			"tailwind.gohtml",
+			"layout.gohtml",
 		),
 	)
 	galleriesController.Templates.Index = views.MustParse(
 		views.ParseFS(
 			templates.FS,
 			"galleries/index.gohtml",
-			"tailwind.gohtml",
+			"layout.gohtml",
 		),
 	)
 	galleriesController.Templates.Show = views.MustParse(
 		views.ParseFS(
 			templates.FS,
 			"galleries/show.gohtml",
-			"tailwind.gohtml",
+			"layout.gohtml",
 		),
 	)
 	// OAuth Controller
@@ -176,13 +176,13 @@ func run(cfg config) error {
 	r := chi.NewRouter()
 	r.Use(csrfMw)
 	r.Use(umw.SetUser)
-	tpl := views.MustParse(views.ParseFS(templates.FS, "home.gohtml", "tailwind.gohtml"))
+	tpl := views.MustParse(views.ParseFS(templates.FS, "home.gohtml", "layout.gohtml"))
 	r.Get("/", controllers.StaticHandler(tpl))
 
-	tpl = views.MustParse(views.ParseFS(templates.FS, "contact.gohtml", "tailwind.gohtml"))
+	tpl = views.MustParse(views.ParseFS(templates.FS, "contact.gohtml", "layout.gohtml"))
 	r.Get("/contact", controllers.StaticHandler(tpl))
 
-	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "tailwind.gohtml"))
+	tpl = views.MustParse(views.ParseFS(templates.FS, "faq.gohtml", "layout.gohtml"))
 	r.Get("/faq", controllers.FAQ(tpl))
 
 	r.Get("/signup", usersController.New)            // send the form

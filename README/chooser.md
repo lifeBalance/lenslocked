@@ -293,3 +293,12 @@ func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 ```
+
+## Dropbox JavaScript only on Edit page
+
+At this point, all of our pages end up with the JavaScript code that we need only in our **edit** page. This is not a big deal in this case, since we have checks in our JavaScript code, to make sure we grab the button with id `dropbox-user-form`, before running our `setUpDropbox` function.
+
+> [!WARNING]
+> We'll also be refactoring the `ParseFS` in the `views/templage.go` file.
+
+But at some point down the line, we may want to have a way to have JavaScript only in the pages that need it. We can achieve this using a new [action](https://pkg.go.dev/text/template#hdr-Actions) named `{{block}}`. Let's add a block in our layout (`layout.gohtml`) that our edit template can fill, and we’ll move the Dropbox scripts into `{{block "scripts" .}}…{{end}}` so they only render on the edit page before wiring it up in the templates. So in our 

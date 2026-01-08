@@ -247,6 +247,11 @@ func (g Galleries) UploadImage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
+// UploadImageViaURL processes Dropbox chooser submissions and downloads the selected files.
+//
+// It requires the current user to own the gallery, parses the posted URLs, and then fetches
+// each image concurrently via the GalleryService. If any download fails the entire request
+// responds with 500; otherwise the user is redirected back to the gallery edit page.
 func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(w, r, userMustOwnGallery)
 	if err != nil {
