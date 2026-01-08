@@ -252,3 +252,44 @@ func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 ```
 
 To achieve this we've used a [WaitGroup](https://pkg.go.dev/sync#WaitGroup) typically used to wait for a group of tasks (goroutines) to finish. All of these tasks will be running concurrently.
+
+## Adding ErrGroup
+
+The code above is a bit subpar, since the anonymous function, returns an **error response** as soon as some image fails to be created? But hey, we can only return **one response**!! The way to fix that is to collect any errors in an [errgroup](https://pkg.go.dev/golang.org/x/sync/errgroup).
+
+> [!WARNING]
+> Don't forget to install the `errgroup` package:
+>
+> ```
+> go get golang.org/x/sync/errgroup
+> ```
+
+Then, we'll update our code to make use of it:
+
+```go
+func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
+	if err != nil {
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	files := r.PostForm["files"]
+	var eg errgroup.Group
+	for _, f := range files {
+		eg.Go(func() error {
+			return g.GalleryService.CreateImageViaURL(gallery.ID, f)
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		http.Error(w, "unable to download ALL image: ", http.StatusInternalServerError)
+		return
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
+}
+```

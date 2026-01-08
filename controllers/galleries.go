@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"path/filepath"
 	"strconv"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/lifebalance/lenslocked/context"
 	"github.com/lifebalance/lenslocked/models"
+	"golang.org/x/sync/errgroup"
 )
 
 type Galleries struct {
@@ -258,18 +258,17 @@ func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	files := r.PostForm["files"]
-	var wg sync.WaitGroup
-	wg.Add(len(files))
+	var eg errgroup.Group
 	for _, f := range files {
-		go func(imageUrl string) {
-			err = g.GalleryService.CreateImageViaURL(gallery.ID, imageUrl)
-			if err != nil {
-				http.Error(w, "something went wrong creating image: "+f, http.StatusInternalServerError)
-			}
-			wg.Done()
-		}(f) // 👈 Pass f here! ⚠️
+		eg.Go(func() error {
+			return g.GalleryService.CreateImageViaURL(gallery.ID, f)
+		})
 	}
-	wg.Wait()
+	err = eg.Wait()
+	if err != nil {
+		http.Error(w, "unable to download ALL image: ", http.StatusInternalServerError)
+		return
+	}
 	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
