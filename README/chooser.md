@@ -1,0 +1,207 @@
+# Dropbox Chooser
+
+The [Dropbox Chooser](https://www.dropbox.com/developers/chooser) it's a small JavaScript component that enables your app to get files from Dropbox without having to worry about the complexities of implementing a file browser, authentication, or managing uploads and storage.
+
+> [!IMPORTANT]
+> We must add the domain of our app in the **Chooser** section of our **App console**. That's the way we avoid anybody using our **app key** (will be set in the `data-app-key` attribute of the main template).
+
+## The UI
+
+Visually, the chooser consists in a button:
+
+![chooser btn](img/chooser-btn.png)
+
+When the user clicks on it, a file chooser pops up, allowing the user to choose some files.
+
+![chooser dialog](img/chooser-dialog.png)
+
+## Setup
+
+Setting up the file chooser is quite simple, we just have to add a script to our **main template**:
+
+```html
+<script
+  type="text/javascript"
+  src="https://www.dropbox.com/static/api/2/dropins.js"
+  id="dropboxjs"
+  data-app-key="ypm-- YOUR APP KEY --qg2"
+></script>
+```
+
+> [!IMPORTANT]
+> Replace the value in the `data-app-key` attribute with your **app key**.
+
+Then, below that script tag, we'll create another one where we can conffigure the behaviour of the file chooser:
+
+```html
+<script>
+  function setUpDropbox() {
+    let elem = document.getElementById("dropbox-user-form");
+    if (elem == null) {
+      return; // Early return
+    }
+
+    let options = {
+      success: function (files) {
+        alert("Here's the file link: " + files[0].link); // Debug
+      },
+      cancel: function () {},
+      linkType: "direct", // or "preview"
+      multiselect: false,
+      extensions: [".jpeg", ".jpg", ".png", ".gif"],
+      folderselect: false,
+      sizeLimit: 1024 * 1024, // bigger files will be dimmed
+    };
+
+    let button = Dropbox.createChooseButton(options);
+    elem.appendChild(button);
+  }
+
+  setUpDropbox();
+</script>
+```
+
+A few things to note here:
+
+- In the template where we want to render the button, we'll create a button with the id `dropbox-user-form`; once clicked it will trigger the dialog.
+- In the `success` property, we specify the JavaScript code we want to run whenever the user selects a file in the Dropbox file chooser. At this point, clicking and uploading should show an alert saying:
+
+```
+Here's the file link:
+https://dl.dropboxusercontent.com/1/view/2wkvk4exhb4zzcd/gopher.jpg
+```
+
+In the next section, we'll write a function that will create an HTML form to submit the image!
+
+## Success
+
+Instead of just showing the files in an alert, we want to create an input element for each selected file, append them dynamically to a form, and submit.
+
+```js
+function setUpDropbox() {
+  let dropboxForm = document.getElementById("dropbox-user-form");
+  if (dropboxForm == null) {
+    return; // Early return
+  }
+
+  let options = {
+    success: function (files) {
+      for (const f of files) {
+        let input = document.createElement("input");
+        input.type = "hidden";
+        input.value = f.link;
+        dropboxForm.append(input);
+      }
+      // console.log(dropboxForm); // debug
+      dropboxForm.submit();
+    },
+    cancel: function () {},
+    linkType: "direct", // or "direct"
+    multiselect: false,
+    extensions: [".jpeg", ".jpg", ".png", ".gif"],
+    folderselect: false,
+    sizeLimit: 1024 * 1024, // bigger files will be dimmed
+  };
+
+  let button = Dropbox.createChooseButton(options);
+  dropboxForm.appendChild(button);
+}
+```
+
+## The Edit Gallery Template
+
+In our `edit.gohtml` template, we need to create a form with the same `id` we are using in the previous script:
+
+```html
+<form
+  action="/galleries/{{.ID}}/images/urls"
+  method="post"
+  enctype="multipart/form-data"
+  id="dropbox-user-form"
+>
+  {{ csrfField }}
+  <div class="py-2">
+    <p class="block mb-2 text-sm font-semibold text-gray-800"
+      >Add Images via Dropbox
+      <p class="py-2 text-xs text-gray-600">Only jpg, png and gif files.</p>
+    </p>
+  </div>
+</form>
+```
+
+## The Handler
+
+Then, in our **backend** we have to add a handler to our galleries controller:
+
+```go
+func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
+	if err != nil {
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	files := r.PostForm["files"]
+	for _, f := range files {
+		fmt.Printf("Downloading %s\n", f) // TODO: implement
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
+}
+```
+
+And wire it up in our `server.go`, using the same URL we use in the form in our `edit.gohtml` template.
+
+## Downloading the Images
+
+Right now our controller should have access to the image URLs, but the code for **downloading** the images using those URLs belongs in the **models**. So in our `models/gallery.go` let's add a `CreateImageViaURL`:
+
+```go
+func (svc *GalleryService) CreateImageViaURL(galleryId int, url string) error {
+	filename := path.Base(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("downloading image: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("downloading image - invalid status code %d", resp.StatusCode)
+	}
+	imageBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading image bytes: %w", err)
+	}
+	readSeeker := bytes.NewReader(imageBytes)
+	return svc.CreateImage(galleryId, filename, readSeeker)
+}
+```
+
+Using it in the controller is the last step:
+
+```go
+func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
+	if err != nil {
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	files := r.PostForm["files"]
+	for _, f := range files {
+		fmt.Printf("Downloading %s\n", f) // TODO: implement
+		// Make it work, make it better!
+		err = g.GalleryService.CreateImageViaURL(gallery.ID, f)
+		if err != nil {
+			http.Error(w, "something went wrong creating image: "+f, http.StatusInternalServerError)
+		}
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
+}
+```

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> -->
-  <link rel="stylesheet" href="/assets/styles.css">
+    <link rel="stylesheet" href="/assets/styles.css" />
   </head>
   <body class="min-h-screen flex flex-col">
     <header class="bg-gradient-to-r from-blue-800 to-purple-800 text-white">
@@ -119,6 +119,47 @@
         // closeable.remove() // Alternative
         closeable.classList.add("hidden");
       }
+    </script>
+
+    <!-- Dropbox chooser -->
+    <script
+      type="text/javascript"
+      src="https://www.dropbox.com/static/api/2/dropins.js"
+      id="dropboxjs"
+      data-app-key="ypmx1a32kvl2qg2"
+    ></script>
+    <script>
+      function setUpDropbox() {
+        let dropboxForm = document.getElementById("dropbox-user-form");
+        if (dropboxForm == null) {
+          return; // Early return
+        }
+
+        let options = {
+          success: function (files) {
+            for (const f of files) {
+              let input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "files";
+              input.value = f.link;
+              dropboxForm.append(input);
+            }
+            // console.log(dropboxForm); // debug
+            dropboxForm.submit();
+          },
+          cancel: function () {},
+          linkType: "direct", // or "direct"
+          multiselect: true,
+          extensions: [".jpeg", ".jpg", ".png", ".gif"],
+          folderselect: false,
+          sizeLimit: 1024 * 1024, // bigger files will be dimmed
+        };
+
+        let button = Dropbox.createChooseButton(options);
+        dropboxForm.appendChild(button);
+      }
+
+      setUpDropbox();
     </script>
   </body>
 </html>

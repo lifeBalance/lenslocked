@@ -1,11 +1,14 @@
 package models
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -229,6 +232,24 @@ func (svc *GalleryService) Images(galleryId int) ([]Image, error) {
 		}
 	}
 	return images, nil
+}
+
+func (svc *GalleryService) CreateImageViaURL(galleryId int, url string) error {
+	filename := path.Base(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("downloading image: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("downloading image - invalid status code %d", resp.StatusCode)
+	}
+	imageBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading image bytes: %w", err)
+	}
+	readSeeker := bytes.NewReader(imageBytes)
+	return svc.CreateImage(galleryId, filename, readSeeker)
 }
 
 // Image returns a single image from a gallery.

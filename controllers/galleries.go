@@ -246,6 +246,29 @@ func (g Galleries) UploadImage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
+func (g Galleries) UploadImageViaURL(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r, userMustOwnGallery)
+	if err != nil {
+		return
+	}
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	files := r.PostForm["files"]
+	for _, f := range files {
+		fmt.Printf("Downloading %s\n", f) // TODO: implement
+		// Make it work, make it better!
+		err = g.GalleryService.CreateImageViaURL(gallery.ID, f)
+		if err != nil {
+			http.Error(w, "something went wrong creating image: "+f, http.StatusInternalServerError)
+		}
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
+}
+
 // Delete deletes a gallery by its `id` URL param.
 //
 // It writes an HTTP error response and returns early when:
